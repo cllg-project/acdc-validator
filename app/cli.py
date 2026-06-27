@@ -5,12 +5,13 @@ from xml.etree import ElementTree as ET
 from PIL import Image as PILImage
 from flask import current_app
 from . import db
-from .models import User, Line
+from .models import User, Line, Annotation
 
 
 def register(app):
     app.cli.add_command(init_cmd)
     app.cli.add_command(user_cmd)
+    app.cli.add_command(export_cmd)
 
 
 @click.command("init")
@@ -144,3 +145,74 @@ def user_edit(username, password):
     u.set_password(password)
     db.session.commit()
     click.echo(f"Password updated for '{username}'.")
+
+
+ALTO_NS = "http://www.loc.gov/standards/alto/ns-v4#"
+VALIDATED_STATUSES = ("validated", "edited")
+
+
+@click.command("export")
+@click.option("--data-path", default=None, help="Path to book-samples folder")
+def export_cmd(data_path):
+    """Write .post-cllg.xml ALTO files with unvalidated lines removed."""
+    data_path = data_path or current_app.config["DATA_PATH"]
+
+    # Build lookup: xml_rel → {line_index: best_annotation}
+    # "best" = any validated/edited annotation wins over skipped/none
+    lines = Line.query.all()
+    page_map = {}  # xml_rel → {line_index: Line}
+    for line in lines:
+        page_map.setdefault(line.alto_xml, {})[line.line_index] = line
+
+    written = skipped_pages = 0
+
+    for xml_rel, line_by_idx in page_map.items():
+        xml_abs = os.path.join(data_path, xml_rel)
+        if not os.path.exists(xml_abs):
+            click.echo(f"  [WARN] Missing XML: {xml_rel}")
+            skipped_pages += 1
+            continue
+
+        # Determine validation status for each line in this page
+        validated = {}   # line_index → corrected_text or None
+        for idx, line in line_by_idx.items():
+            ann = (
+                Annotation.query
+                .filter_by(line_id=line.id)
+                .filter(Annotation.status.in_(VALIDATED_STATUSES))
+                .order_by(Annotation.id.desc())
+                .first()
+            )
+            if ann:
+                validated[idx] = ann.corrected_text  # None means keep original text
+
+        ET.register_namespace("", ALTO_NS)
+        tree = ET.parse(xml_abs)
+        root = tree.getroot()
+
+        removed = kept = 0
+        for block in root.findall(f".//{{{ALTO_NS}}}TextBlock"):
+            for tl in list(block.findall(f"{{{ALTO_NS}}}TextLine")):
+                # Match by position in document order
+                all_tl = root.findall(f".//{{{ALTO_NS}}}TextLine")
+                idx = all_tl.index(tl)
+
+                if idx not in validated:
+                    block.remove(tl)
+                    removed += 1
+                else:
+                    corrected = validated[idx]
+                    if corrected is not None:
+                        string_el = tl.find(f"{{{ALTO_NS}}}String")
+                        if string_el is not None:
+                            string_el.set("CONTENT", corrected)
+                    kept += 1
+
+        out_path = xml_abs.replace(".xml", ".post-cllg.xml")
+        # Preserve XML declaration and formatting
+        ET.indent(root, space="  ")
+        tree.write(out_path, encoding="UTF-8", xml_declaration=True)
+        click.echo(f"  {xml_rel}: kept {kept}, removed {removed} → {os.path.basename(out_path)}")
+        written += 1
+
+    click.echo(f"\nDone. {written} files exported, {skipped_pages} skipped.")

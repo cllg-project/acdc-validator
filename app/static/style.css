@@ -36,7 +36,7 @@ body {
   gap: 1.5rem;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 200;
 }
 
 .brand { font-weight: 700; font-size: 1rem; letter-spacing: -.3px; }
@@ -237,6 +237,7 @@ main { padding: 2rem 1.5rem; max-width: 860px; margin: 0 auto; }
 .modal-overlay {
   position: fixed;
   inset: 0;
+  top: 52px; /* sit below the navbar so nav links remain clickable */
   background: rgba(0,0,0,.45);
   display: flex;
   align-items: center;

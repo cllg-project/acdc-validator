@@ -24,3 +24,6 @@ book-samples.zip
 *.swp
 *~
 deploy/generated/
+
+# Alembic local stamp (not needed in repo)
+migrations/versions/__pycache__/

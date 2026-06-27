@@ -1,9 +1,11 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
+from flask_migrate import Migrate
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 db = SQLAlchemy()
+migrate = Migrate()
 login_manager = LoginManager()
 login_manager.login_view = "auth.login"
 
@@ -15,6 +17,7 @@ def create_app(config=None):
         app.config.update(config)
 
     db.init_app(app)
+    migrate.init_app(app, db)
     login_manager.init_app(app)
 
     # Honour X-Forwarded-Prefix / SCRIPT_NAME set by nginx for subpath deployments

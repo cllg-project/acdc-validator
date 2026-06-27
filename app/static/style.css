@@ -246,6 +246,52 @@ main { padding: 2rem 1.5rem; max-width: 860px; margin: 0 auto; }
   font-family: monospace;
 }
 
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--blue);
+  cursor: pointer;
+  font-size: .78rem;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.btn-link:hover { color: var(--blue-h); }
+
+.beta-help {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: .8rem;
+  font-size: .82rem;
+}
+
+.beta-help-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+}
+
+.beta-help h4 {
+  font-size: .75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--muted);
+  margin-bottom: .4rem;
+}
+
+.beta-table { border-collapse: collapse; width: 100%; }
+.beta-table td {
+  padding: .15rem .4rem;
+  border-bottom: 1px solid var(--border);
+  font-family: monospace;
+}
+.beta-table td:nth-child(odd)  { color: var(--muted); width: 3rem; }
+.beta-table td:nth-child(even) { font-family: "Noto Serif", serif; font-size: 1rem; }
+.beta-table tr:last-child td { border-bottom: none; }
+
 /* ── OCR text (editable in review) ────────────────────────── */
 .ocr-edit {
   width: 100%;

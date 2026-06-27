@@ -102,12 +102,23 @@
         betaToggle.addEventListener('change', function() {
           if (betaToggle.checked) {
             var parts = textField.value.split(' ');
-            betaRaw = parts[parts.length - 1];  // user will overwrite it
+            betaRaw = parts[parts.length - 1];
           }
           var label = document.getElementById('beta-label');
           if (label) label.textContent = betaToggle.checked ? 'Betacode ON' : 'Betacode OFF';
           textField.focus();
         });
+
+      // Help panel toggle
+      var helpBtn = document.getElementById('beta-help-btn');
+      var helpPanel = document.getElementById('beta-help');
+      if (helpBtn && helpPanel) {
+        helpBtn.addEventListener('click', function() {
+          var hidden = helpPanel.hidden;
+          helpPanel.hidden = !hidden;
+          helpBtn.textContent = hidden ? '✕ close reference' : '? reference';
+        });
+      }
       }
     }
   }

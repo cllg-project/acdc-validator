@@ -32,6 +32,48 @@
         <span id="beta-label">Betacode OFF</span>
       </label>
       <span class="beta-hint">e.g. <code>lo/gos</code> → <code>λόγος</code> &nbsp;·&nbsp; <code>*qeo/s</code> → <code>Θεός</code></span>
+      <button type="button" id="beta-help-btn" class="btn-link">? reference</button>
+    </div>
+
+    <div id="beta-help" class="beta-help" hidden>
+      <div class="beta-help-cols">
+        <div>
+          <h4>Letters</h4>
+          <table class="beta-table">
+            <tr><td>a</td><td>α</td> <td>n</td><td>ν</td></tr>
+            <tr><td>b</td><td>β</td> <td>c</td><td>ξ</td></tr>
+            <tr><td>g</td><td>γ</td> <td>o</td><td>ο</td></tr>
+            <tr><td>d</td><td>δ</td> <td>p</td><td>π</td></tr>
+            <tr><td>e</td><td>ε</td> <td>r</td><td>ρ</td></tr>
+            <tr><td>z</td><td>ζ</td> <td>s</td><td>σ/ς</td></tr>
+            <tr><td>h</td><td>η</td> <td>t</td><td>τ</td></tr>
+            <tr><td>q</td><td>θ</td> <td>u</td><td>υ</td></tr>
+            <tr><td>i</td><td>ι</td> <td>f</td><td>φ</td></tr>
+            <tr><td>k</td><td>κ</td> <td>x</td><td>χ</td></tr>
+            <tr><td>l</td><td>λ</td> <td>y</td><td>ψ</td></tr>
+            <tr><td>m</td><td>μ</td> <td>w</td><td>ω</td></tr>
+          </table>
+        </div>
+        <div>
+          <h4>Diacritics</h4>
+          <table class="beta-table">
+            <tr><td>/</td><td>acute ά</td></tr>
+            <tr><td>\</td><td>grave ὰ</td></tr>
+            <tr><td>=</td><td>circumflex ᾶ</td></tr>
+            <tr><td>)</td><td>smooth ἀ</td></tr>
+            <tr><td>(</td><td>rough ἁ</td></tr>
+            <tr><td>+</td><td>diaeresis ϊ</td></tr>
+            <tr><td>|</td><td>iota subscript ᾳ</td></tr>
+          </table>
+          <h4 style="margin-top:.8rem">Uppercase &amp; combos</h4>
+          <table class="beta-table">
+            <tr><td>*a</td><td>Α</td></tr>
+            <tr><td>*qeo/s</td><td>Θεός</td></tr>
+            <tr><td>a)/nqrwpos</td><td>ἄνθρωπος</td></tr>
+            <tr><td>h(=</td><td>ἦ</td></tr>
+          </table>
+        </div>
+      </div>
     </div>
     <textarea name="text" id="text-field" class="ocr-edit" rows="2"
               spellcheck="false">{{ prefill }}</textarea>

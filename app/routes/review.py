@@ -13,11 +13,18 @@ VALIDATED_STATUSES = ("validated", "edited")
 DONE_FOR_USER_STATUSES = ("validated", "edited", "rejected")
 
 
+MAX_ANNOTATIONS = 2
+
+
 def _next_line(user_id):
-    """Return the next Line that no user has validated yet, and that this user hasn't finished."""
-    globally_done = (
+    """Return the next Line that has fewer than MAX_ANNOTATIONS validated annotations
+    and that this user hasn't permanently dealt with."""
+    from sqlalchemy import func
+    saturated = (
         db.session.query(Annotation.line_id)
         .filter(Annotation.status.in_(VALIDATED_STATUSES))
+        .group_by(Annotation.line_id)
+        .having(func.count(Annotation.id) >= MAX_ANNOTATIONS)
         .subquery()
     )
     user_done = (
@@ -28,7 +35,7 @@ def _next_line(user_id):
     )
     return (
         Line.query
-        .filter(~sa_exists().where(globally_done.c.line_id == Line.id))
+        .filter(~sa_exists().where(saturated.c.line_id == Line.id))
         .filter(~sa_exists().where(user_done.c.line_id == Line.id))
         .order_by(Line.book_id, Line.line_index)
         .first()

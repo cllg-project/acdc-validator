@@ -8,16 +8,21 @@ from ..models import Line, Annotation
 bp = Blueprint("validate", __name__)
 
 VALIDATED_STATUSES = ("validated", "edited")
+MAX_ANNOTATIONS = 2
 
 
 def _next_line(user_id):
     """Return the next Line that:
-    - has not been validated/edited by anyone (globally done), and
+    - has fewer than MAX_ANNOTATIONS validated/edited annotations across all users, and
     - has not been touched at all by this user (any annotation).
     """
-    globally_done = (
+    from sqlalchemy import func
+    # Lines that have reached the annotation cap (MAX_ANNOTATIONS distinct validated users)
+    saturated = (
         db.session.query(Annotation.line_id)
         .filter(Annotation.status.in_(VALIDATED_STATUSES))
+        .group_by(Annotation.line_id)
+        .having(func.count(Annotation.id) >= MAX_ANNOTATIONS)
         .subquery()
     )
     user_seen = (
@@ -27,7 +32,7 @@ def _next_line(user_id):
     )
     return (
         Line.query
-        .filter(~exists().where(globally_done.c.line_id == Line.id))
+        .filter(~exists().where(saturated.c.line_id == Line.id))
         .filter(~exists().where(user_seen.c.line_id == Line.id))
         .order_by(Line.book_id, Line.line_index)
         .first()

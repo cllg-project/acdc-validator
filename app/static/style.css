@@ -349,6 +349,7 @@ main { padding: 2rem 1.5rem; max-width: 860px; margin: 0 auto; }
 
 .modal-box h2 { font-size: 1.4rem; margin-bottom: .7rem; }
 .modal-box p  { color: var(--muted); margin-bottom: 1.5rem; line-height: 1.6; }
+.modal-timing-note { font-size: .82rem; border-left: 3px solid var(--border); padding-left: .6rem; margin-top: -.8rem; }
 
 /* ── Home page ─────────────────────────────────────────────── */
 .home-hero {

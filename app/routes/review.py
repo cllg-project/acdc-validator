@@ -120,7 +120,7 @@ def submit(line_id):
     )
     db.session.add(ann)
     db.session.commit()
-    return redirect(url_for("review.index"))
+    return redirect(url_for("validate.index"))
 
 
 def _parse_elapsed(value):

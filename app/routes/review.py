@@ -68,7 +68,7 @@ def index():
         .first()
     )
     prefill = last.corrected_text if last else line.ocr_text
-    return render_template("review.html", line=line, prefill=prefill)
+    return render_template("review.html", line=line, prefill=prefill, from_validate="0")
 
 
 @bp.route("/review/<int:line_id>", methods=["GET"])
@@ -83,7 +83,8 @@ def specific(line_id):
         .first()
     )
     prefill = last.corrected_text if last else line.ocr_text
-    return render_template("review.html", line=line, prefill=prefill)
+    from_validate = request.args.get("from_validate", "0")
+    return render_template("review.html", line=line, prefill=prefill, from_validate=from_validate)
 
 
 @bp.route("/review/<int:line_id>", methods=["POST"])
@@ -120,7 +121,9 @@ def submit(line_id):
     )
     db.session.add(ann)
     db.session.commit()
-    return redirect(url_for("validate.index"))
+    if request.form.get("from_validate") == "1":
+        return redirect(url_for("validate.index"))
+    return redirect(url_for("review.index"))
 
 
 def _parse_elapsed(value):

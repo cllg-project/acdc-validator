@@ -69,7 +69,7 @@ def submit(line_id):
     db.session.add(ann)
     db.session.commit()
     if action == "skip_edited":
-        return redirect(url_for("review.specific", line_id=line.id))
+        return redirect(url_for("review.specific", line_id=line.id, from_validate=1))
     return redirect(url_for("validate.index"))
 
 

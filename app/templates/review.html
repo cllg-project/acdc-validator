@@ -27,6 +27,7 @@
   <form method="post" action="{{ url_for('review.submit', line_id=line.id) }}" id="annotation-form">
     <input type="hidden" name="elapsed_seconds" id="elapsed-field">
     <input type="hidden" name="original_text" value="{{ line.ocr_text }}">
+    <input type="hidden" name="from_validate" value="{{ from_validate }}">
     <div class="beta-bar">
       <label class="beta-switch">
         <input type="checkbox" id="beta-toggle">

@@ -185,14 +185,16 @@
   }
 
   // ── Inject elapsed time on form submit ───────────────────────
+  function writeElapsed() {
+    var field = document.getElementById('elapsed-field');
+    if (field) {
+      field.value = ((elapsed + (startTime ? Date.now() - startTime : 0)) / 1000).toFixed(2);
+    }
+  }
+
   var form = document.getElementById('annotation-form');
   if (form) {
-    form.addEventListener('submit', function () {
-      var field = document.getElementById('elapsed-field');
-      if (field && startTime !== null) {
-        field.value = ((elapsed + (startTime ? Date.now() - startTime : 0)) / 1000).toFixed(2);
-      }
-    });
+    form.addEventListener('submit', writeElapsed);
   }
 
   // ── Keyboard shortcuts ───────────────────────────────────────
@@ -217,11 +219,7 @@
 
   function submitAction(action) {
     if (!form) return;
-    var field = document.getElementById('elapsed-field');
-    if (field && startTime !== null) {
-      field.value = ((elapsed + (startTime ? Date.now() - startTime : 0)) / 1000).toFixed(2);
-    }
-    // Find the matching submit button and click it to carry its name/value
+    writeElapsed();
     var btn = form.querySelector('button[value="' + action + '"]');
     if (btn) btn.click();
   }

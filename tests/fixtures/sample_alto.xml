@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<alto xmlns="http://www.loc.gov/standards/alto/ns-v4#">
+  <Description>
+    <MeasurementUnit>pixel</MeasurementUnit>
+    <sourceImageInformation>
+      <fileName>test_page.png</fileName>
+    </sourceImageInformation>
+  </Description>
+  <Layout>
+    <Page WIDTH="1000" HEIGHT="2000" ID="page_0">
+      <PrintSpace HPOS="0" VPOS="0" WIDTH="1000" HEIGHT="2000">
+        <TextBlock ID="block_1">
+          <TextLine ID="line_1" HPOS="100" VPOS="200" WIDTH="800" HEIGHT="50" BASELINE="100 250 900 250">
+            <Shape>
+              <Polygon POINTS="100 200 95 230 100 250 900 250 905 220 900 200"/>
+            </Shape>
+            <String CONTENT="First line of Greek text" HPOS="100" VPOS="200" WIDTH="800" HEIGHT="50"/>
+          </TextLine>
+          <TextLine ID="line_2" HPOS="100" VPOS="350" WIDTH="750" HEIGHT="55" BASELINE="100 405 850 405">
+            <Shape>
+              <Polygon POINTS="100 350 98 380 100 405 850 405 852 375 850 350"/>
+            </Shape>
+            <String CONTENT="Second line of Greek text" HPOS="100" VPOS="350" WIDTH="750" HEIGHT="55"/>
+          </TextLine>
+          <TextLine ID="line_3" HPOS="100" VPOS="510" WIDTH="700" HEIGHT="48" BASELINE="100 558 800 558">
+            <Shape>
+              <Polygon POINTS="100 510 97 540 100 558 800 558 803 528 800 510"/>
+            </Shape>
+            <String CONTENT="Third line of Greek text" HPOS="100" VPOS="510" WIDTH="700" HEIGHT="48"/>
+          </TextLine>
+        </TextBlock>
+      </PrintSpace>
+    </Page>
+  </Layout>
+</alto>

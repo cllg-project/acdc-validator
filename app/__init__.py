@@ -35,6 +35,7 @@ def create_app(config=None):
     from .routes.review import bp as review_bp
     from .routes.image import bp as image_bp
     from .routes.stats import bp as stats_bp
+    from .routes.validated import bp as validated_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(home_bp)
@@ -42,6 +43,7 @@ def create_app(config=None):
     app.register_blueprint(review_bp)
     app.register_blueprint(image_bp)
     app.register_blueprint(stats_bp)
+    app.register_blueprint(validated_bp)
 
     from . import cli
     cli.register(app)

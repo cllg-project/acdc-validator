@@ -25,6 +25,7 @@ class Line(db.Model):
     page_jpg = db.Column(db.String(512), nullable=False)  # relative to DATA_PATH
     alto_xml = db.Column(db.String(512), nullable=False)  # relative to DATA_PATH
     line_index = db.Column(db.Integer, nullable=False)
+    xml_line_id = db.Column(db.String(256), nullable=True)
     hpos = db.Column(db.Integer, nullable=False)
     vpos = db.Column(db.Integer, nullable=False)
     width = db.Column(db.Integer, nullable=False)

@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Validated lines{% endblock %}
+{% block content %}
+
+<div class="val-header">
+  <h1>Validated lines</h1>
+  <span class="val-count">{{ pagination.total }} line{{ 's' if pagination.total != 1 }}</span>
+</div>
+
+<!-- Filters -->
+<form class="val-filters" method="get" action="{{ url_for('validated.index') }}">
+  <select name="book" class="val-select" onchange="this.form.submit()">
+    <option value="">All books</option>
+    {% for bid in book_ids %}
+      <option value="{{ bid }}" {% if book_filter == bid %}selected{% endif %}>{{ bid }}</option>
+    {% endfor %}
+  </select>
+
+  <select name="status" class="val-select" onchange="this.form.submit()">
+    <option value="">All statuses</option>
+    <option value="validated" {% if status_filter == 'validated' %}selected{% endif %}>✓ Validated as-is</option>
+    <option value="edited"    {% if status_filter == 'edited'    %}selected{% endif %}>✎ Edited</option>
+  </select>
+
+  <select name="user" class="val-select" onchange="this.form.submit()">
+    <option value="">All users</option>
+    {% for u in usernames %}
+      <option value="{{ u }}" {% if user_filter == u %}selected{% endif %}>{{ u }}</option>
+    {% endfor %}
+  </select>
+
+  {% if book_filter or status_filter or user_filter %}
+    <a href="{{ url_for('validated.index') }}" class="val-clear">✕ Clear</a>
+  {% endif %}
+</form>
+
+{% if rows %}
+<div class="val-grid">
+  {% for line, ann, username in rows %}
+  <div class="val-card">
+    <div class="val-img-wrap">
+      <img
+        data-src="{{ url_for('image.line_image', line_id=line.id) }}"
+        alt="Line {{ line.line_index + 1 }} of {{ line.book_id }}"
+        class="val-img lazy"
+        width="600" height="80">
+    </div>
+    <div class="val-meta">
+      <span class="val-book">{{ line.book_id }}</span>
+      <span class="val-line-num">line {{ line.line_index + 1 }}</span>
+      <span class="badge badge-{{ ann.status }}">
+        {% if ann.status == 'validated' %}✓ validated{% else %}✎ edited{% endif %}
+      </span>
+      <span class="val-user">{{ username }}</span>
+    </div>
+    <div class="val-texts">
+      {% if ann.status == 'edited' and ann.corrected_text %}
+        <p class="val-corrected">{{ ann.corrected_text }}</p>
+        <p class="val-original" title="Original OCR">{{ line.ocr_text }}</p>
+      {% else %}
+        <p class="val-corrected">{{ line.ocr_text }}</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if pagination.pages > 1 %}
+<nav class="pager">
+  {% if pagination.has_prev %}
+    <a href="{{ url_for('validated.index', page=pagination.prev_num, book=book_filter, status=status_filter, user=user_filter) }}" class="pager-btn">← Prev</a>
+  {% else %}
+    <span class="pager-btn pager-disabled">← Prev</span>
+  {% endif %}
+
+  <span class="pager-info">Page {{ pagination.page }} / {{ pagination.pages }}</span>
+
+  {% if pagination.has_next %}
+    <a href="{{ url_for('validated.index', page=pagination.next_num, book=book_filter, status=status_filter, user=user_filter) }}" class="pager-btn">Next →</a>
+  {% else %}
+    <span class="pager-btn pager-disabled">Next →</span>
+  {% endif %}
+</nav>
+{% endif %}
+
+{% else %}
+<p class="val-empty">No validated lines match the current filters.</p>
+{% endif %}
+
+<script>
+(function () {
+  var imgs = document.querySelectorAll('img.lazy');
+  if (!imgs.length) return;
+
+  var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (!entry.isIntersecting) return;
+      var img = entry.target;
+      img.src = img.dataset.src;
+      img.classList.remove('lazy');
+      observer.unobserve(img);
+    });
+  }, { rootMargin: '200px 0px' });
+
+  imgs.forEach(function (img) { observer.observe(img); });
+}());
+</script>
+{% endblock %}

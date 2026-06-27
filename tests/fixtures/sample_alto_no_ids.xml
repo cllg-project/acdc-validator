@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<alto xmlns="http://www.loc.gov/standards/alto/ns-v4#">
+  <Description>
+    <MeasurementUnit>pixel</MeasurementUnit>
+  </Description>
+  <Layout>
+    <Page WIDTH="1000" HEIGHT="2000" ID="page_0">
+      <PrintSpace HPOS="0" VPOS="0" WIDTH="1000" HEIGHT="2000">
+        <TextBlock ID="block_1">
+          <TextLine HPOS="100" VPOS="200" WIDTH="800" HEIGHT="50">
+            <Shape>
+              <Polygon POINTS="100 200 100 250 900 250 900 200"/>
+            </Shape>
+            <String CONTENT="Line without XML ID" HPOS="100" VPOS="200" WIDTH="800" HEIGHT="50"/>
+          </TextLine>
+          <TextLine HPOS="100" VPOS="350" WIDTH="750" HEIGHT="55">
+            <Shape>
+              <Polygon POINTS="100 350 100 405 850 405 850 350"/>
+            </Shape>
+            <String CONTENT="Another line without XML ID" HPOS="100" VPOS="350" WIDTH="750" HEIGHT="55"/>
+          </TextLine>
+        </TextBlock>
+      </PrintSpace>
+    </Page>
+  </Layout>
+</alto>

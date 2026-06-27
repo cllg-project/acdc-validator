@@ -10,7 +10,7 @@ bp = Blueprint("review", __name__)
 VALIDATED_STATUSES = ("validated", "edited")
 
 # Statuses that permanently retire a line for the current user
-DONE_FOR_USER_STATUSES = ("validated", "edited", "rejected")
+DONE_FOR_USER_STATUSES = ("validated", "edited", "rejected", "skipped")
 
 
 MAX_ANNOTATIONS = 2

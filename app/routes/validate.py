@@ -34,7 +34,7 @@ def _next_line(user_id):
         Line.query
         .filter(~exists().where(saturated.c.line_id == Line.id))
         .filter(~exists().where(user_seen.c.line_id == Line.id))
-        .order_by(Line.book_id, Line.line_index)
+        .order_by(db.func.random())
         .first()
     )
 

@@ -1,0 +1,23 @@
+# Suggested nginx server block — place in /etc/nginx/sites-available/acdc-validator
+# and symlink to sites-enabled/, then: sudo nginx -t && sudo systemctl reload nginx
+
+server {
+    listen 80;
+    server_name validator.example.com;
+
+    # Redirect HTTP → HTTPS (uncomment after certbot setup)
+    # return 301 https://$host$request_uri;
+
+    location / {
+        include proxy_params;
+        proxy_pass http://unix:/home/tclerice/dev/cllg-data-filter/acdc-validator.sock;
+        proxy_read_timeout 120s;
+    }
+
+    # Serve static files directly for performance
+    location /static/ {
+        alias /home/tclerice/dev/cllg-data-filter/app/static/;
+        expires 1d;
+        add_header Cache-Control "public";
+    }
+}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Validate – {{ line.book_id }}{% endblock %}
+{% block content %}
+
+<!-- Ready modal -->
+<div id="ready-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h2>Ready to annotate?</h2>
+    <p>You will see one line of text extracted from a page scan.<br>
+       Confirm it is correct, or skip to come back later.</p>
+    <button id="ready-btn" class="btn btn-primary">I'm ready <kbd>Ctrl+Enter</kbd></button>
+  </div>
+</div>
+
+<div class="annotation-wrap" id="annotation-area" style="display:none">
+  <div class="meta">
+    <span class="book-id">{{ line.book_id }}</span>
+    <span class="line-index">line {{ line.line_index + 1 }}</span>
+  </div>
+
+  <div class="line-image-wrap">
+    <img src="{{ url_for('image.line_image', line_id=line.id) }}"
+         alt="Line image" class="line-image">
+  </div>
+
+  <div class="ocr-text">{{ line.ocr_text }}</div>
+
+  <form method="post" action="{{ url_for('validate.submit', line_id=line.id) }}" id="annotation-form">
+    <input type="hidden" name="elapsed_seconds" id="elapsed-field">
+    <div class="action-bar">
+      <button type="submit" name="action" value="validated" class="btn btn-success"
+              title="Keyboard: V">✓ Validate</button>
+      <button type="submit" name="action" value="skip_edited" class="btn btn-skip-edit"
+              title="Keyboard: E">✎ Skip to edit</button>
+      <button type="submit" name="action" value="skipped" class="btn btn-secondary"
+              title="Keyboard: S">→ Skip</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  window.ANNOTATOR_MODE = 'validate';
+</script>
+{% endblock %}

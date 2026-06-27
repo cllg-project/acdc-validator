@@ -38,6 +38,8 @@
     t:'τ',u:'υ',f:'φ',x:'χ',y:'ψ',w:'ω',v:'ϝ'
   };
   var BETA_DIA = {')':'̓','(':'̔','/':'́','\\':'̀','=':'͂','+':'̈','|':'ͅ'};
+  // Greek punctuation inserted directly (not part of word conversion)
+  var BETA_PUNCT = {':':'·', ';':';'}; // ano teleia · (U+0387), erotimatiko ; (U+037E)
 
   function betaToGreek(text) {
     var clusters = [], pendingUpper = false, pendingMarks = [];
@@ -85,17 +87,59 @@
         textField.addEventListener('keydown', function(e) {
           if (!betaToggle.checked) return;
           if (e.key === 'Enter' || e.metaKey || e.ctrlKey || e.altKey) return;
+
+          var cursor = textField.selectionStart;
+
           if (e.key === 'Backspace') {
             e.preventDefault();
-            betaRaw = betaRaw.slice(0, -1);
+            if (betaRaw.length > 0) {
+              // Remove last betacode char
+              betaRaw = betaRaw.slice(0, -1);
+            } else {
+              // betaRaw exhausted — delete one Unicode char before cursor
+              var v = textField.value;
+              textField.value = v.slice(0, cursor - 1) + v.slice(cursor);
+              textField.setSelectionRange(cursor - 1, cursor - 1);
+              updateSaveBtn();
+              return;
+            }
+          } else if (BETA_PUNCT[e.key] !== undefined) {
+            // Greek punctuation: flush current word, insert punct, reset buffer
+            e.preventDefault();
+            var parts = textField.value.split(' ');
+            parts[parts.length - 1] = betaToGreek(betaRaw) + BETA_PUNCT[e.key];
+            betaRaw = '';
+            textField.value = parts.join(' ');
+            // move cursor to end of inserted punctuation
+            textField.setSelectionRange(textField.value.length, textField.value.length);
+            updateSaveBtn();
+            return;
+          } else if (e.key === ' ') {
+            // Space: flush current betacode word, start fresh
+            e.preventDefault();
+            var parts2 = textField.value.split(' ');
+            parts2[parts2.length - 1] = betaToGreek(betaRaw);
+            betaRaw = '';
+            textField.value = parts2.join(' ') + ' ';
+            textField.setSelectionRange(textField.value.length, textField.value.length);
+            updateSaveBtn();
+            return;
           } else if (e.key.length === 1) {
             e.preventDefault();
             betaRaw += e.key;
+          } else {
+            return; // arrow keys etc. — don't intercept
           }
-          // Replace only the current "word" (last space-separated token) with Greek
-          var parts = textField.value.split(' ');
-          parts[parts.length - 1] = betaToGreek(betaRaw);
-          textField.value = parts.join(' ');
+
+          // Re-render last word, preserving cursor position for earlier text
+          var prefix = textField.value.lastIndexOf(' ') + 1; // start of last word
+          var safeCursor = Math.min(cursor, prefix);         // keep cursor if before last word
+          var parts3 = textField.value.split(' ');
+          parts3[parts3.length - 1] = betaToGreek(betaRaw);
+          textField.value = parts3.join(' ');
+          // Restore cursor: if it was before the last word, keep it there; otherwise go to end
+          var newPos = cursor <= prefix ? safeCursor : textField.value.length;
+          textField.setSelectionRange(newPos, newPos);
           updateSaveBtn();
         });
         // When toggling on, seed betaRaw from current last word

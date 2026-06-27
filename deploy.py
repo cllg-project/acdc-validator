@@ -95,9 +95,12 @@ RestartSec=5
 WantedBy=multi-user.target
 """
 
-NGINX_TEMPLATE = """\
-# Suggested nginx server block — place in /etc/nginx/sites-available/{app_name}
-# and symlink to sites-enabled/, then: sudo nginx -t && sudo systemctl reload nginx
+# ── nginx: root deployment (/), owns the whole virtual host ──────────────────
+NGINX_ROOT_TEMPLATE = """\
+# Suggested nginx server block — root deployment (http://{server_name}/)
+# Place in /etc/nginx/sites-available/{app_name}
+# sudo ln -s /etc/nginx/sites-available/{app_name} /etc/nginx/sites-enabled/
+# sudo nginx -t && sudo systemctl reload nginx
 
 server {{
     listen 80;
@@ -106,19 +109,40 @@ server {{
     # Redirect HTTP → HTTPS (uncomment after certbot setup)
     # return 301 https://$host$request_uri;
 
-    location / {{
-        include proxy_params;
-        proxy_pass http://unix:{repo_root}/{app_name}.sock;
-        proxy_read_timeout 120s;
-    }}
-
-    # Serve static files directly for performance
     location /static/ {{
         alias {repo_root}/app/static/;
         expires 1d;
         add_header Cache-Control "public";
     }}
+
+    location / {{
+        include proxy_params;
+        proxy_pass http://unix:{repo_root}/{app_name}.sock;
+        proxy_read_timeout 120s;
+    }}
 }}
+"""
+
+# ── nginx: subpath deployment (/prefix/), added to an existing server block ──
+NGINX_SUBPATH_TEMPLATE = """\
+# Suggested nginx location block — subpath deployment (http://{server_name}/{subpath}/)
+#
+# Add the two location blocks below inside your EXISTING server block for {server_name}.
+# The app uses the SCRIPT_NAME header to rewrite all its URLs to the correct prefix.
+
+    location /{subpath}/static/ {{
+        alias {repo_root}/app/static/;
+        expires 1d;
+        add_header Cache-Control "public";
+    }}
+
+    location /{subpath}/ {{
+        include proxy_params;
+        proxy_pass http://unix:{repo_root}/{app_name}.sock;
+        proxy_read_timeout 120s;
+        proxy_set_header SCRIPT_NAME /{subpath};
+        proxy_set_header X-Forwarded-Prefix /{subpath};
+    }}
 """
 
 ENV_TEMPLATE = """\
@@ -135,7 +159,8 @@ DATA_PATH={repo_root}/book-samples
 
 # ── file generation ──────────────────────────────────────────────────────────
 
-def generate_files(app_name: str, server_name: str, rec: dict) -> list[Path]:
+def generate_files(app_name: str, server_name: str, subpath: str | None,
+                   rec: dict) -> list[Path]:
     GENERATED_DIR.mkdir(parents=True, exist_ok=True)
     user = getpass.getuser()
     venv_bin = str(REPO_ROOT / "env" / "bin")
@@ -154,9 +179,15 @@ def generate_files(app_name: str, server_name: str, rec: dict) -> list[Path]:
     written.append(service_path)
 
     nginx_path = GENERATED_DIR / f"{app_name}.nginx"
-    nginx_path.write_text(NGINX_TEMPLATE.format(
-        app_name=app_name, repo_root=REPO_ROOT, server_name=server_name,
-    ))
+    if subpath:
+        nginx_path.write_text(NGINX_SUBPATH_TEMPLATE.format(
+            app_name=app_name, repo_root=REPO_ROOT,
+            server_name=server_name, subpath=subpath.strip("/"),
+        ))
+    else:
+        nginx_path.write_text(NGINX_ROOT_TEMPLATE.format(
+            app_name=app_name, repo_root=REPO_ROOT, server_name=server_name,
+        ))
     written.append(nginx_path)
 
     env_path = GENERATED_DIR / ".env.recommended"
@@ -214,6 +245,10 @@ def main():
                         help="Other apps/services already running on this box (skips the prompt).")
     parser.add_argument("--server-name", default=None,
                         help="Hostname for the nginx block (e.g. validator.example.com).")
+    parser.add_argument("--subpath", default=None,
+                        help="URL prefix when mounted under an existing domain "
+                             "(e.g. acdc-validator → served at /acdc-validator/). "
+                             "Omit for a dedicated virtual host at /.")
     args = parser.parse_args()
 
     print("== Scanning this server ==")
@@ -232,6 +267,15 @@ def main():
     server_name = args.server_name or \
         ask_str("Hostname for nginx server_name", "validator.example.com")
 
+    if args.subpath is not None:
+        subpath = args.subpath.strip("/") or None
+    else:
+        raw = ask_str(
+            "URL subpath if mounted under an existing domain (leave blank for dedicated host)",
+            "",
+        ).strip("/")
+        subpath = raw or None
+
     rec = recommend(cpus, ram_mb, expected_users, other_apps)
 
     print()
@@ -241,23 +285,32 @@ def main():
 
     print()
     print("== Generating files ==")
-    written = generate_files(args.app_name, server_name, rec)
+    written = generate_files(args.app_name, server_name, subpath, rec)
     for p in written:
         print(f"  wrote  {p.relative_to(REPO_ROOT)}")
 
     rel = GENERATED_DIR.relative_to(REPO_ROOT)
+    url = f"http://{server_name}/{subpath}/" if subpath else f"http://{server_name}/"
     print()
     print("Next steps (review the generated files first):")
     print(f"  1. cp {rel}/.env.recommended .env")
     print(f"     # edit .env — set DATA_PATH if book-samples is not in {REPO_ROOT}")
-    print(f"  2. env/bin/flask init          # populate DB and convert PNGs → JPGs")
-    print(f"  3. env/bin/flask user add <name>")
-    print(f"  4. sudo cp {rel}/{args.app_name}.service /etc/systemd/system/")
+    print(f"  2. env/bin/python /usr/share/python-wheels/pip-*.whl/pip install -r requirements-deploy.txt")
+    print(f"     # or: pip install -r requirements-deploy.txt  (installs gunicorn)")
+    print(f"  3. env/bin/flask init          # populate DB and convert PNGs → JPGs")
+    print(f"  4. env/bin/flask user add <name>")
+    print(f"  5. sudo cp {rel}/{args.app_name}.service /etc/systemd/system/")
     print(f"     sudo systemctl daemon-reload")
     print(f"     sudo systemctl enable --now {args.app_name}")
-    print(f"  5. sudo cp {rel}/{args.app_name}.nginx /etc/nginx/sites-available/{args.app_name}")
-    print(f"     sudo ln -s /etc/nginx/sites-available/{args.app_name} /etc/nginx/sites-enabled/")
-    print(f"     sudo nginx -t && sudo systemctl reload nginx")
+    if subpath:
+        print(f"  6. Add the location blocks from {rel}/{args.app_name}.nginx")
+        print(f"     into your existing nginx server block for {server_name}")
+        print(f"     sudo nginx -t && sudo systemctl reload nginx")
+    else:
+        print(f"  6. sudo cp {rel}/{args.app_name}.nginx /etc/nginx/sites-available/{args.app_name}")
+        print(f"     sudo ln -s /etc/nginx/sites-available/{args.app_name} /etc/nginx/sites-enabled/")
+        print(f"     sudo nginx -t && sudo systemctl reload nginx")
+    print(f"\n  App will be available at: {url}")
 
     if not args.apply:
         print()

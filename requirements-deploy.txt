@@ -1,0 +1,5 @@
+# Production dependencies (superset of requirements.txt)
+-r requirements.txt
+
+# WSGI server
+gunicorn>=22.0

@@ -1,23 +1,18 @@
-# Suggested nginx server block — place in /etc/nginx/sites-available/acdc-validator
-# and symlink to sites-enabled/, then: sudo nginx -t && sudo systemctl reload nginx
+# Suggested nginx location block — subpath deployment (http://foo.bar/acdc-validator/)
+#
+# Add the two location blocks below inside your EXISTING server block for foo.bar.
+# The app uses the SCRIPT_NAME header to rewrite all its URLs to the correct prefix.
 
-server {
-    listen 80;
-    server_name validator.example.com;
-
-    # Redirect HTTP → HTTPS (uncomment after certbot setup)
-    # return 301 https://$host$request_uri;
-
-    location / {
-        include proxy_params;
-        proxy_pass http://unix:/home/tclerice/dev/cllg-data-filter/acdc-validator.sock;
-        proxy_read_timeout 120s;
-    }
-
-    # Serve static files directly for performance
-    location /static/ {
+    location /acdc-validator/static/ {
         alias /home/tclerice/dev/cllg-data-filter/app/static/;
         expires 1d;
         add_header Cache-Control "public";
     }
-}
+
+    location /acdc-validator/ {
+        include proxy_params;
+        proxy_pass http://unix:/home/tclerice/dev/cllg-data-filter/acdc-validator.sock;
+        proxy_read_timeout 120s;
+        proxy_set_header SCRIPT_NAME /acdc-validator;
+        proxy_set_header X-Forwarded-Prefix /acdc-validator;
+    }

@@ -48,16 +48,18 @@
         <th>Skip→Edit</th>
         <th>Avg (s)</th>
         <th>Skipped</th>
+        <th>Rejected</th>
         <th>Total</th>
       </tr>
     </thead>
     <tbody>
       {% for username, s in user_stats.items() %}
-      {% set v = s.get('validated', {}) %}
-      {% set e = s.get('edited', {}) %}
-      {% set sk = s.get('skipped', {}) %}
+      {% set v  = s.get('validated', {}) %}
+      {% set e  = s.get('edited', {}) %}
       {% set se = s.get('skip_edited', {}) %}
-      {% set total = (v.cnt or 0) + (e.cnt or 0) + (sk.cnt or 0) + (se.cnt or 0) %}
+      {% set sk = s.get('skipped', {}) %}
+      {% set rj = s.get('rejected', {}) %}
+      {% set total = (v.cnt or 0) + (e.cnt or 0) + (se.cnt or 0) + (sk.cnt or 0) + (rj.cnt or 0) %}
       <tr>
         <td><strong>{{ username }}</strong></td>
         <td>{{ v.cnt or 0 }}</td>
@@ -67,6 +69,7 @@
         <td>{{ se.cnt or 0 }}</td>
         <td>{{ se.avg_elapsed or '—' }}</td>
         <td>{{ sk.cnt or 0 }}</td>
+        <td>{{ rj.cnt or 0 }}</td>
         <td>{{ total }}</td>
       </tr>
       {% endfor %}

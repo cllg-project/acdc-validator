@@ -31,6 +31,22 @@
     });
   }
 
+  // ── Save-edit button: dim until text changes ─────────────────
+  if (mode === 'review') {
+    var textField = document.getElementById('text-field');
+    var saveBtn = document.getElementById('btn-save-edit');
+    if (textField && saveBtn) {
+      var originalText = textField.value;
+      function updateSaveBtn() {
+        var changed = textField.value !== originalText;
+        saveBtn.classList.toggle('btn-primary', changed);
+        saveBtn.classList.toggle('btn-muted', !changed);
+      }
+      updateSaveBtn();
+      textField.addEventListener('input', updateSaveBtn);
+    }
+  }
+
   // ── Inject elapsed time on form submit ───────────────────────
   var form = document.getElementById('annotation-form');
   if (form) {
@@ -56,7 +72,7 @@
     } else if (mode === 'review') {
       if (e.key === 'v' || e.key === 'V') submitAction('validated');
       if (e.key === 's' || e.key === 'S') submitAction('skipped');
-      // Enter key in review only submits if focus is outside textarea
+      if (e.key === 'x' || e.key === 'X') submitAction('rejected');
       if (e.key === 'Enter' && !e.shiftKey) submitAction('edited');
     }
   });

@@ -144,6 +144,19 @@ main { padding: 2rem 1.5rem; max-width: 860px; margin: 0 auto; }
 .btn-skip-edit { background: #e8f0fb; color: var(--blue); border: 1px solid #b8cff0; }
 .btn-skip-edit:hover { background: #d4e4f7; }
 
+.btn-danger { background: #fdecea; color: #b71c1c; border: 1px solid #f0b0ab; }
+.btn-danger:hover { background: #fbd7d4; }
+
+.btn-muted { background: #efefef; color: var(--muted); border: 1px solid var(--border); cursor: default; opacity: .6; }
+.btn-muted:hover { background: #efefef; }
+
+.action-hint {
+  margin-top: .8rem;
+  font-size: .78rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 /* ── Annotation area ───────────────────────────────────────── */
 .annotation-wrap {
   background: var(--surface);

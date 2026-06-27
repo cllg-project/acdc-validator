@@ -8,25 +8,28 @@ from ..models import Line, Annotation
 bp = Blueprint("review", __name__)
 
 VALIDATED_STATUSES = ("validated", "edited")
-NEEDS_REVIEW_STATUSES = ("skipped", "skip_edited")
+
+# Statuses that permanently retire a line for the current user
+DONE_FOR_USER_STATUSES = ("validated", "edited", "rejected")
 
 
 def _next_line(user_id):
-    """Return the next Line that no user has validated yet, and that this user hasn't skipped."""
-    # Lines already validated (by anyone)
-    validated_ids = (
+    """Return the next Line that no user has validated yet, and that this user hasn't finished."""
+    # Lines already validated/edited by anyone → globally retired
+    globally_done = (
         db.session.query(Annotation.line_id)
         .filter(Annotation.status.in_(VALIDATED_STATUSES))
     )
-    # Lines this user already reviewed (any status)
-    user_reviewed = (
+    # Lines this user has permanently dealt with (validated, edited, or rejected)
+    user_done = (
         db.session.query(Annotation.line_id)
         .filter_by(user_id=user_id)
+        .filter(Annotation.status.in_(DONE_FOR_USER_STATUSES))
     )
     return (
         Line.query
-        .filter(Line.id.notin_(validated_ids))
-        .filter(Line.id.notin_(user_reviewed))
+        .filter(Line.id.notin_(globally_done))
+        .filter(Line.id.notin_(user_done))
         .order_by(Line.book_id, Line.line_index)
         .first()
     )
@@ -70,12 +73,24 @@ def specific(line_id):
 @login_required
 def submit(line_id):
     line = Line.query.get_or_404(line_id)
-    action = request.form.get("action")  # edited | validated | skipped
-    if action not in ("edited", "validated", "skipped"):
+    action = request.form.get("action")  # edited | validated | skipped | rejected
+    if action not in ("edited", "validated", "skipped", "rejected"):
         flash("Invalid action.")
         return redirect(url_for("review.index"))
 
-    corrected = request.form.get("text", "").strip() or None
+    text = request.form.get("text", "").strip()
+
+    # What gets saved per action:
+    #   edited    → corrected_text = new text (user changed something)
+    #   validated → corrected_text = None (OCR was fine as-is)
+    #   skipped   → corrected_text = text as left (partial work saved, line returns later)
+    #   rejected  → corrected_text = None (user dismisses line permanently for themselves)
+    if action == "edited":
+        corrected = text or None
+    elif action == "skipped":
+        corrected = text if text != request.form.get("original_text", "") else None
+    else:
+        corrected = None
 
     elapsed = _parse_elapsed(request.form.get("elapsed_seconds"))
     ann = Annotation(

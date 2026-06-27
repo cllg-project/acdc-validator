@@ -25,16 +25,25 @@
 
   <form method="post" action="{{ url_for('review.submit', line_id=line.id) }}" id="annotation-form">
     <input type="hidden" name="elapsed_seconds" id="elapsed-field">
+    <input type="hidden" name="original_text" value="{{ line.ocr_text }}">
     <textarea name="text" id="text-field" class="ocr-edit" rows="2"
               spellcheck="false">{{ prefill }}</textarea>
     <div class="action-bar">
-      <button type="submit" name="action" value="edited" class="btn btn-primary"
-              title="Keyboard: Enter (when text changed)">✎ Save correction</button>
-      <button type="submit" name="action" value="validated" class="btn btn-success"
-              title="Keyboard: V">✓ Confirm as-is</button>
-      <button type="submit" name="action" value="skipped" class="btn btn-skip-edit"
-              title="Keyboard: S">⏭ Skip (save edit)</button>
+      <button type="submit" name="action" value="edited" id="btn-save-edit"
+              class="btn btn-primary" title="Keyboard: Enter">✎ Save edit</button>
+      <button type="submit" name="action" value="validated"
+              class="btn btn-success" title="Keyboard: V">✓ Validate as-is</button>
+      <button type="submit" name="action" value="skipped"
+              class="btn btn-skip-edit" title="Keyboard: S">⏭ Skip</button>
+      <button type="submit" name="action" value="rejected"
+              class="btn btn-danger" title="Keyboard: X">✕ Skip forever</button>
     </div>
+    <p class="action-hint">
+      <strong>Save edit</strong> — text was corrected &nbsp;·&nbsp;
+      <strong>Validate as-is</strong> — OCR is correct &nbsp;·&nbsp;
+      <strong>Skip</strong> — come back later &nbsp;·&nbsp;
+      <strong>Skip forever</strong> — ignore this line (only for you)
+    </p>
   </form>
 </div>
 

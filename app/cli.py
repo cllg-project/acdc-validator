@@ -159,7 +159,15 @@ def export_cmd(data_path):
 
     # Build lookup: xml_rel → {line_index: best_annotation}
     # "best" = any validated/edited annotation wins over skipped/none
-    lines = Line.query.all()
+    # Only load lines that have at least one validated/edited annotation
+    validated_line_ids = (
+        db.session.query(Annotation.line_id)
+        .filter(Annotation.status.in_(VALIDATED_STATUSES))
+        .distinct()
+        .subquery()
+    )
+    lines = Line.query.filter(Line.id.in_(validated_line_ids)).all()
+
     page_map = {}  # xml_rel → {line_index: Line}
     for line in lines:
         page_map.setdefault(line.alto_xml, {})[line.line_index] = line
@@ -173,7 +181,7 @@ def export_cmd(data_path):
             skipped_pages += 1
             continue
 
-        # Determine validation status for each line in this page
+        # Best validated/edited annotation per line on this page
         validated = {}   # line_index → corrected_text or None
         for idx, line in line_by_idx.items():
             ann = (
@@ -184,22 +192,19 @@ def export_cmd(data_path):
                 .first()
             )
             if ann:
-                validated[idx] = ann.corrected_text  # None means keep original text
+                validated[idx] = ann.corrected_text  # None means keep original OCR text
 
         ET.register_namespace("", ALTO_NS)
         tree = ET.parse(xml_abs)
         root = tree.getroot()
 
-        removed = kept = 0
+        all_tl = root.findall(f".//{{{ALTO_NS}}}TextLine")
+        kept = 0
         for block in root.findall(f".//{{{ALTO_NS}}}TextBlock"):
             for tl in list(block.findall(f"{{{ALTO_NS}}}TextLine")):
-                # Match by position in document order
-                all_tl = root.findall(f".//{{{ALTO_NS}}}TextLine")
                 idx = all_tl.index(tl)
-
                 if idx not in validated:
                     block.remove(tl)
-                    removed += 1
                 else:
                     corrected = validated[idx]
                     if corrected is not None:
@@ -209,10 +214,9 @@ def export_cmd(data_path):
                     kept += 1
 
         out_path = xml_abs.replace(".xml", ".post-cllg.xml")
-        # Preserve XML declaration and formatting
         ET.indent(root, space="  ")
         tree.write(out_path, encoding="UTF-8", xml_declaration=True)
-        click.echo(f"  {xml_rel}: kept {kept}, removed {removed} → {os.path.basename(out_path)}")
+        click.echo(f"  {xml_rel}: {kept} lines → {os.path.basename(out_path)}")
         written += 1
 
     click.echo(f"\nDone. {written} files exported, {skipped_pages} skipped.")

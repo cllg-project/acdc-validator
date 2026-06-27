@@ -4,6 +4,7 @@ from flask import Blueprint, current_app, send_file, abort
 from flask_login import login_required
 from PIL import Image, ImageDraw
 from ..models import Line
+from .. import db
 
 bp = Blueprint("image", __name__)
 
@@ -60,3 +61,13 @@ def line_image(line_id):
     result.save(buf, format="JPEG", quality=90)
     buf.seek(0)
     return send_file(buf, mimetype="image/jpeg")
+
+
+@bp.route("/image/example")
+@login_required
+def example_image():
+    """Return a random line image for use on the homepage."""
+    line = Line.query.order_by(db.func.random()).first()
+    if line is None:
+        abort(404)
+    return line_image(line.id)

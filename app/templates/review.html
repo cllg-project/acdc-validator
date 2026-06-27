@@ -26,6 +26,13 @@
   <form method="post" action="{{ url_for('review.submit', line_id=line.id) }}" id="annotation-form">
     <input type="hidden" name="elapsed_seconds" id="elapsed-field">
     <input type="hidden" name="original_text" value="{{ line.ocr_text }}">
+    <div class="beta-bar">
+      <label class="beta-switch">
+        <input type="checkbox" id="beta-toggle">
+        <span id="beta-label">Betacode OFF</span>
+      </label>
+      <span class="beta-hint">e.g. <code>lo/gos</code> → <code>λόγος</code> &nbsp;·&nbsp; <code>*qeo/s</code> → <code>Θεός</code></span>
+    </div>
     <textarea name="text" id="text-field" class="ocr-edit" rows="2"
               spellcheck="false">{{ prefill }}</textarea>
     <div class="action-bar">

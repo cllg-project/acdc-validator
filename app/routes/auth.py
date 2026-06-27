@@ -27,4 +27,7 @@ def logout():
 
 @bp.route("/")
 def root():
-    return redirect(url_for("validate.index"))
+    from flask_login import current_user
+    if current_user.is_authenticated:
+        return redirect(url_for("home.index"))
+    return redirect(url_for("auth.login"))

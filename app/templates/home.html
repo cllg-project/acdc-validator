@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Welcome — ALTO Annotator{% endblock %}
+{% block content %}
+
+<div class="home-hero">
+  <h1>ALTO Annotation Platform</h1>
+  <p class="home-lead">
+    Help us validate and correct OCR transcriptions of historical Greek and Latin texts.
+    Each task shows you one line extracted from a scanned page — your job is to confirm
+    or correct what the OCR read.
+  </p>
+
+  {% if total %}
+  <div class="home-progress">
+    {% set pct = (saturated / total * 100) | round(1) %}
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" style="width:{{ pct }}%"></div>
+    </div>
+    <p class="progress-label">
+      <strong>{{ saturated }}</strong> of {{ total }} lines fully annotated ({{ pct }}%)
+    </p>
+  </div>
+  {% endif %}
+
+  <div class="home-cta">
+    <a href="{{ url_for('validate.index') }}" class="btn btn-success">Start annotating →</a>
+  </div>
+</div>
+
+<!-- Example image -->
+<section class="home-section">
+  <h2>What you'll see</h2>
+  <p>Each line is shown cropped from the original page scan. The text outside the detected
+     line boundary is dimmed so you can focus on the target line, while still seeing enough
+     context to understand what surrounds it.</p>
+  <div class="example-image-wrap">
+    <img src="{{ url_for('image.example_image') }}" alt="Example line image" class="example-image"
+         onerror="this.parentElement.style.display='none'">
+    <p class="example-caption">Example: a cropped line with surrounding context dimmed</p>
+  </div>
+</section>
+
+<!-- Step 1 -->
+<section class="home-section">
+  <h2><span class="step-badge step1">Step 1</span> Validate</h2>
+  <p>
+    You see a line image and its OCR transcription. Read the transcription and decide
+    whether it matches what you see in the image.
+    Each line will be shown to up to <strong>2 annotators</strong> independently,
+    enabling inter-annotator agreement.
+  </p>
+  <div class="button-grid">
+    <div class="button-doc btn-success-doc">
+      <div class="btn-preview btn-success">✓ Validate <kbd>V</kbd></div>
+      <p>The OCR text is <strong>correct</strong>. Confirms the line and removes it from
+         your queue. Once 2 annotators validate it, the line is fully resolved.</p>
+    </div>
+    <div class="button-doc btn-skip-edit-doc">
+      <div class="btn-preview btn-skip-edit">✎ Skip to edit <kbd>E</kbd></div>
+      <p>The text needs <strong>correction</strong>. Flags the line and takes you directly
+         to the review editor (Step 2) for this line.</p>
+    </div>
+    <div class="button-doc btn-secondary-doc">
+      <div class="btn-preview btn-secondary">→ Skip <kbd>S</kbd></div>
+      <p><strong>Come back later.</strong> The line stays in your queue and will reappear
+         in a future session.</p>
+    </div>
+    <div class="button-doc btn-danger-doc">
+      <div class="btn-preview btn-danger">✕ Unsure / not qualified <kbd>U</kbd></div>
+      <p>You are <strong>not confident</strong> about this line (unusual script, damaged
+         text, language you don't read). Hides it permanently from your queue without
+         counting as an annotation — other annotators can still reach it.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Step 2 -->
+<section class="home-section">
+  <h2><span class="step-badge step2">Step 2</span> Review &amp; Correct</h2>
+  <p>
+    Lines that were flagged in Step 1 (or that have never been validated) appear here.
+    The transcription is now <strong>editable</strong> — type your correction directly
+    in the text box.
+  </p>
+  <div class="button-grid">
+    <div class="button-doc btn-primary-doc">
+      <div class="btn-preview btn-primary">✎ Save edit <kbd>Enter</kbd></div>
+      <p>You <strong>changed the text</strong> and want to save your correction.
+         The button activates automatically once you start typing.</p>
+    </div>
+    <div class="button-doc btn-success-doc">
+      <div class="btn-preview btn-success">✓ Validate as-is <kbd>V</kbd></div>
+      <p>The OCR text is actually <strong>correct</strong> after all — no change needed.
+         Validates without saving any corrected text.</p>
+    </div>
+    <div class="button-doc btn-skip-edit-doc">
+      <div class="btn-preview btn-skip-edit">⏭ Skip <kbd>S</kbd></div>
+      <p>Not sure right now. If you typed something, your partial edit is saved and
+         pre-filled next time this line appears.</p>
+    </div>
+    <div class="button-doc btn-danger-doc">
+      <div class="btn-preview btn-danger">✕ Skip forever <kbd>X</kbd></div>
+      <p>Permanently hides this line from <strong>your</strong> queue.
+         Other annotators can still see and correct it.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Ready modal note -->
+<section class="home-section home-section-sm">
+  <h2>Timer &amp; ready prompt</h2>
+  <p>
+    Before each line is revealed, a short prompt asks <em>"Are you ready?"</em> —
+    click the button or press <kbd>Ctrl+Enter</kbd> to start. This lets us measure how
+    long each annotation takes without counting time spent away from the screen.
+    The timer runs until you submit an action.
+  </p>
+</section>
+
+{% endblock %}

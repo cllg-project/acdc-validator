@@ -48,6 +48,7 @@
         <th>Skip→Edit</th>
         <th>Avg (s)</th>
         <th>Skipped</th>
+        <th>Abstained</th>
         <th>Rejected</th>
         <th>Total</th>
       </tr>
@@ -58,8 +59,9 @@
       {% set e  = s.get('edited', {}) %}
       {% set se = s.get('skip_edited', {}) %}
       {% set sk = s.get('skipped', {}) %}
+      {% set ab = s.get('abstained', {}) %}
       {% set rj = s.get('rejected', {}) %}
-      {% set total = (v.cnt or 0) + (e.cnt or 0) + (se.cnt or 0) + (sk.cnt or 0) + (rj.cnt or 0) %}
+      {% set total = (v.cnt or 0) + (e.cnt or 0) + (se.cnt or 0) + (sk.cnt or 0) + (ab.cnt or 0) + (rj.cnt or 0) %}
       <tr>
         <td><strong>{{ username }}</strong></td>
         <td>{{ v.cnt or 0 }}</td>
@@ -69,6 +71,7 @@
         <td>{{ se.cnt or 0 }}</td>
         <td>{{ se.avg_elapsed or '—' }}</td>
         <td>{{ sk.cnt or 0 }}</td>
+        <td>{{ ab.cnt or 0 }}</td>
         <td>{{ rj.cnt or 0 }}</td>
         <td>{{ total }}</td>
       </tr>

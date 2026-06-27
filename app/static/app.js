@@ -69,6 +69,7 @@
       if (e.key === 'v' || e.key === 'V') submitAction('validated');
       if (e.key === 'e' || e.key === 'E') submitAction('skip_edited');
       if (e.key === 's' || e.key === 'S') submitAction('skipped');
+      if (e.key === 'u' || e.key === 'U') submitAction('abstained');
     } else if (mode === 'review') {
       if (e.key === 'v' || e.key === 'V') submitAction('validated');
       if (e.key === 's' || e.key === 'S') submitAction('skipped');

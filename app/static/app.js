@@ -70,7 +70,7 @@
     var betaToggle = document.getElementById('beta-toggle');
     if (textField && saveBtn) {
       var originalText = textField.value;
-      var betaRaw = '';   // raw betacode buffer while toggle is on
+      var betaPending = ''; // pending modifier chars (*,),(/,\,=,+,|) awaiting base letter
 
       function updateSaveBtn() {
         var changed = textField.value !== originalText;
@@ -78,76 +78,110 @@
         saveBtn.classList.toggle('btn-muted', !changed);
       }
       updateSaveBtn();
-      textField.addEventListener('input', function() {
-        if (!betaToggle || !betaToggle.checked) updateSaveBtn();
+      textField.addEventListener('input', function() { updateSaveBtn(); });
+
+      // betaToGreek without σ→ς so we can insert σ and fix it at word boundaries
+      function betaCharToGreek(raw) {
+        var clusters = [], pendingUpper = false, pendingMarks = [];
+        for (var i = 0; i < raw.length; i++) {
+          var ch = raw[i];
+          if (ch === '*') { pendingUpper = true; pendingMarks = []; continue; }
+          if (BETA_DIA[ch] !== undefined) {
+            if (pendingUpper) pendingMarks.push(BETA_DIA[ch]);
+            else if (clusters.length) clusters[clusters.length - 1][1].push(BETA_DIA[ch]);
+            continue;
+          }
+          var low = ch.toLowerCase();
+          var base = BETA_LETTERS[low] !== undefined
+            ? ((pendingUpper || ch !== low) ? BETA_LETTERS[low].toUpperCase() : BETA_LETTERS[low])
+            : ch;
+          clusters.push([base, pendingMarks.slice()]);
+          pendingUpper = false; pendingMarks = [];
+        }
+        return clusters.map(function(c) { return c[0] + c[1].join(''); }).join('').normalize('NFC');
+      }
+
+      // Fix σ → ς when it sits immediately before the cursor (word boundary)
+      function applyFinalSigma() {
+        var pos = textField.selectionStart;
+        if (pos > 0 && textField.value[pos - 1] === 'σ') {
+          var v = textField.value;
+          textField.value = v.slice(0, pos - 1) + 'ς' + v.slice(pos);
+          textField.setSelectionRange(pos, pos);
+        }
+      }
+
+      // Greek punctuation shortcuts — always active regardless of betacode mode
+      textField.addEventListener('keydown', function(e) {
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        if (betaToggle && betaToggle.checked) return; // handled inside betacode block below
+        if (BETA_PUNCT[e.key] !== undefined) {
+          e.preventDefault();
+          var v = textField.value;
+          var pos = textField.selectionStart;
+          var ins = BETA_PUNCT[e.key];
+          textField.value = v.slice(0, pos) + ins + v.slice(textField.selectionEnd);
+          textField.setSelectionRange(pos + ins.length, pos + ins.length);
+          updateSaveBtn();
+        }
       });
 
-      // Betacode toggle
+      // Betacode toggle — character-by-character insertion; native Backspace handles deletion
+      var BETA_MOD_KEYS = new Set([')', '(', '/', '\\', '=', '+', '|', '*']);
       if (betaToggle) {
         textField.addEventListener('keydown', function(e) {
           if (!betaToggle.checked) return;
           if (e.key === 'Enter' || e.metaKey || e.ctrlKey || e.altKey) return;
 
-          var cursor = textField.selectionStart;
-
           if (e.key === 'Backspace') {
-            e.preventDefault();
-            if (betaRaw.length > 0) {
-              // Remove last betacode char
-              betaRaw = betaRaw.slice(0, -1);
-            } else {
-              // betaRaw exhausted — delete one Unicode char before cursor
-              var v = textField.value;
-              textField.value = v.slice(0, cursor - 1) + v.slice(cursor);
-              textField.setSelectionRange(cursor - 1, cursor - 1);
-              updateSaveBtn();
-              return;
-            }
-          } else if (BETA_PUNCT[e.key] !== undefined) {
-            // Greek punctuation: flush current word, insert punct, reset buffer
-            e.preventDefault();
-            var parts = textField.value.split(' ');
-            parts[parts.length - 1] = betaToGreek(betaRaw) + BETA_PUNCT[e.key];
-            betaRaw = '';
-            textField.value = parts.join(' ');
-            // move cursor to end of inserted punctuation
-            textField.setSelectionRange(textField.value.length, textField.value.length);
-            updateSaveBtn();
-            return;
-          } else if (e.key === ' ') {
-            // Space: flush current betacode word, start fresh
-            e.preventDefault();
-            var parts2 = textField.value.split(' ');
-            parts2[parts2.length - 1] = betaToGreek(betaRaw);
-            betaRaw = '';
-            textField.value = parts2.join(' ') + ' ';
-            textField.setSelectionRange(textField.value.length, textField.value.length);
-            updateSaveBtn();
-            return;
-          } else if (e.key.length === 1) {
-            e.preventDefault();
-            betaRaw += e.key;
-          } else {
-            return; // arrow keys etc. — don't intercept
+            betaPending = ''; // discard any dangling modifier
+            return;           // let the browser delete the last inserted char
           }
 
-          // Re-render last word, preserving cursor position for earlier text
-          var prefix = textField.value.lastIndexOf(' ') + 1; // start of last word
-          var safeCursor = Math.min(cursor, prefix);         // keep cursor if before last word
-          var parts3 = textField.value.split(' ');
-          parts3[parts3.length - 1] = betaToGreek(betaRaw);
-          textField.value = parts3.join(' ');
-          // Restore cursor: if it was before the last word, keep it there; otherwise go to end
-          var newPos = cursor <= prefix ? safeCursor : textField.value.length;
-          textField.setSelectionRange(newPos, newPos);
-          updateSaveBtn();
-        });
-        // When toggling on, seed betaRaw from current last word
-        betaToggle.addEventListener('change', function() {
-          if (betaToggle.checked) {
-            var parts = textField.value.split(' ');
-            betaRaw = parts[parts.length - 1];
+          if (BETA_MOD_KEYS.has(e.key)) {
+            betaPending += e.key;
+            e.preventDefault();
+            return;
           }
+
+          if (e.key === ' ') {
+            betaPending = '';
+            applyFinalSigma(); // σ before space → ς
+            // let the browser insert the space; input event will call updateSaveBtn
+            return;
+          }
+
+          if (BETA_PUNCT[e.key] !== undefined) {
+            e.preventDefault();
+            betaPending = '';
+            applyFinalSigma();
+            var v = textField.value;
+            var pos = textField.selectionStart;
+            var ins = BETA_PUNCT[e.key];
+            textField.value = v.slice(0, pos) + ins + v.slice(textField.selectionEnd);
+            textField.setSelectionRange(pos + ins.length, pos + ins.length);
+            updateSaveBtn();
+            return;
+          }
+
+          if (e.key.length === 1) {
+            e.preventDefault();
+            var ch = betaCharToGreek(betaPending + e.key) || e.key;
+            betaPending = '';
+            var v2 = textField.value;
+            var start = textField.selectionStart;
+            var end = textField.selectionEnd;
+            textField.value = v2.slice(0, start) + ch + v2.slice(end);
+            textField.setSelectionRange(start + ch.length, start + ch.length);
+            updateSaveBtn();
+            return;
+          }
+
+          betaPending = ''; // arrow keys etc. — clear modifier and pass through
+        });
+
+        betaToggle.addEventListener('change', function() {
+          betaPending = '';
           var label = document.getElementById('beta-label');
           if (label) label.textContent = betaToggle.checked ? 'Betacode ON' : 'Betacode OFF';
           textField.focus();

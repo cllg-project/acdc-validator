@@ -17,14 +17,23 @@ MAX_ANNOTATIONS = 2
 
 
 def _next_line(user_id):
-    """Return the next Line that has fewer than MAX_ANNOTATIONS validated annotations
-    and that this user hasn't permanently dealt with."""
+    """Return the next Line that:
+    - the current user explicitly flagged as skip_edited in Step 1, AND
+    - has not been globally saturated, AND
+    - the user has not already resolved in Step 2.
+    """
     from sqlalchemy import func
     saturated = (
         db.session.query(Annotation.line_id)
         .filter(Annotation.status.in_(VALIDATED_STATUSES))
         .group_by(Annotation.line_id)
         .having(func.count(Annotation.id) >= MAX_ANNOTATIONS)
+        .subquery()
+    )
+    user_flagged = (
+        db.session.query(Annotation.line_id)
+        .filter(Annotation.user_id == user_id)
+        .filter(Annotation.status == "skip_edited")
         .subquery()
     )
     user_done = (
@@ -35,6 +44,7 @@ def _next_line(user_id):
     )
     return (
         Line.query
+        .filter(sa_exists().where(user_flagged.c.line_id == Line.id))
         .filter(~sa_exists().where(saturated.c.line_id == Line.id))
         .filter(~sa_exists().where(user_done.c.line_id == Line.id))
         .order_by(db.func.random())

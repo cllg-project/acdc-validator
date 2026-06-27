@@ -81,4 +81,61 @@
 </section>
 {% endif %}
 
+<!-- Inter-annotator agreement -->
+{% if annotators | length >= 2 %}
+<section class="stats-card">
+  <h2>Inter-annotator agreement</h2>
+  <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem">
+    Only lines where <strong>both</strong> annotators left a terminal annotation (validated or edited) are counted.
+    <em>Agree validate</em>: both chose "validate as-is".
+    <em>Agree edited</em>: both edited and produced the <strong>same</strong> corrected text.
+    <em>Disagree</em>: any other combination.
+  </p>
+  <table class="stats-table iaa-table">
+    <thead>
+      <tr>
+        <th></th>
+        {% for u2 in annotators %}
+        <th colspan="3" class="iaa-user-header">{{ u2 }}</th>
+        {% endfor %}
+      </tr>
+      <tr>
+        <th>vs.</th>
+        {% for u2 in annotators %}
+        <th class="iaa-sub">✓ val</th>
+        <th class="iaa-sub">✎ edit</th>
+        <th class="iaa-sub">✕ dis</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for u1 in annotators %}
+      <tr>
+        <td><strong>{{ u1 }}</strong></td>
+        {% for u2 in annotators %}
+          {% if u1 == u2 %}
+            <td colspan="3" class="iaa-self">—</td>
+          {% else %}
+            {% set cell = iaa_matrix[u1][u2] %}
+            {% set n = cell.total %}
+            {% if n == 0 %}
+              <td colspan="3" class="iaa-self">no overlap</td>
+            {% else %}
+              {% set pv = (cell.agree_validate / n * 100) | round(1) %}
+              {% set pe = (cell.agree_edited   / n * 100) | round(1) %}
+              {% set pd = (cell.disagree       / n * 100) | round(1) %}
+              <td class="iaa-agree-v" title="{{ cell.agree_validate }}/{{ n }}">{{ pv }}%</td>
+              <td class="iaa-agree-e" title="{{ cell.agree_edited }}/{{ n }}">{{ pe }}%</td>
+              <td class="iaa-disagree" title="{{ cell.disagree }}/{{ n }}">{{ pd }}%</td>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p style="color:var(--muted);font-size:.78rem;margin-top:.6rem">Hover cells to see raw counts.</p>
+</section>
+{% endif %}
+
 {% endblock %}

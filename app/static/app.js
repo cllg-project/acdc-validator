@@ -2,7 +2,23 @@
   'use strict';
 
   var startTime = null;
+  var elapsed = 0;       // accumulated ms while visible
+  var hidden = false;
   var mode = window.ANNOTATOR_MODE; // 'validate' | 'review' | undefined
+
+  document.addEventListener('visibilitychange', function () {
+    if (!startTime) return;
+    if (document.hidden) {
+      // Tab hidden: bank elapsed time, pause
+      elapsed += Date.now() - startTime;
+      startTime = null;
+      hidden = true;
+    } else {
+      // Tab visible again: resume
+      startTime = Date.now();
+      hidden = false;
+    }
+  });
 
   // ── Ready modal ──────────────────────────────────────────────
   var modal = document.getElementById('ready-modal');
@@ -12,6 +28,7 @@
   function dismissModal() {
     modal.style.display = 'none';
     area.style.display = '';
+    elapsed = 0;
     startTime = Date.now();
     if (mode === 'review') {
       var tf = document.getElementById('text-field');
@@ -173,7 +190,7 @@
     form.addEventListener('submit', function () {
       var field = document.getElementById('elapsed-field');
       if (field && startTime !== null) {
-        field.value = ((Date.now() - startTime) / 1000).toFixed(2);
+        field.value = ((elapsed + (startTime ? Date.now() - startTime : 0)) / 1000).toFixed(2);
       }
     });
   }
@@ -202,7 +219,7 @@
     if (!form) return;
     var field = document.getElementById('elapsed-field');
     if (field && startTime !== null) {
-      field.value = ((Date.now() - startTime) / 1000).toFixed(2);
+      field.value = ((elapsed + (startTime ? Date.now() - startTime : 0)) / 1000).toFixed(2);
     }
     // Find the matching submit button and click it to carry its name/value
     var btn = form.querySelector('button[value="' + action + '"]');

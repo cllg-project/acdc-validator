@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_required, current_user
-from sqlalchemy import exists
+from sqlalchemy import exists as sa_exists
 from .. import db
 from ..models import Line, Annotation
 
@@ -15,21 +15,21 @@ DONE_FOR_USER_STATUSES = ("validated", "edited", "rejected")
 
 def _next_line(user_id):
     """Return the next Line that no user has validated yet, and that this user hasn't finished."""
-    # Lines already validated/edited by anyone → globally retired
     globally_done = (
         db.session.query(Annotation.line_id)
         .filter(Annotation.status.in_(VALIDATED_STATUSES))
+        .subquery()
     )
-    # Lines this user has permanently dealt with (validated, edited, or rejected)
     user_done = (
         db.session.query(Annotation.line_id)
-        .filter_by(user_id=user_id)
+        .filter(Annotation.user_id == user_id)
         .filter(Annotation.status.in_(DONE_FOR_USER_STATUSES))
+        .subquery()
     )
     return (
         Line.query
-        .filter(Line.id.notin_(globally_done))
-        .filter(Line.id.notin_(user_done))
+        .filter(~sa_exists().where(globally_done.c.line_id == Line.id))
+        .filter(~sa_exists().where(user_done.c.line_id == Line.id))
         .order_by(Line.book_id, Line.line_index)
         .first()
     )

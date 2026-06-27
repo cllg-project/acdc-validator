@@ -1,18 +1,34 @@
 from datetime import datetime, timezone
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_required, current_user
+from sqlalchemy import exists
 from .. import db
 from ..models import Line, Annotation
 
 bp = Blueprint("validate", __name__)
 
+VALIDATED_STATUSES = ("validated", "edited")
+
 
 def _next_line(user_id):
-    """Return the next Line this user has not yet annotated."""
-    annotated_ids = db.session.query(Annotation.line_id).filter_by(user_id=user_id)
+    """Return the next Line that:
+    - has not been validated/edited by anyone (globally done), and
+    - has not been touched at all by this user (any annotation).
+    """
+    globally_done = (
+        db.session.query(Annotation.line_id)
+        .filter(Annotation.status.in_(VALIDATED_STATUSES))
+        .subquery()
+    )
+    user_seen = (
+        db.session.query(Annotation.line_id)
+        .filter(Annotation.user_id == user_id)
+        .subquery()
+    )
     return (
         Line.query
-        .filter(Line.id.notin_(annotated_ids))
+        .filter(~exists().where(globally_done.c.line_id == Line.id))
+        .filter(~exists().where(user_seen.c.line_id == Line.id))
         .order_by(Line.book_id, Line.line_index)
         .first()
     )

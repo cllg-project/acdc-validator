@@ -10,7 +10,7 @@ bp = Blueprint("review", __name__)
 VALIDATED_STATUSES = ("validated", "edited")
 
 # Statuses that permanently retire a line for the current user
-DONE_FOR_USER_STATUSES = ("validated", "edited", "rejected", "skipped")
+DONE_FOR_USER_STATUSES = ("validated", "edited", "rejected")
 
 
 MAX_ANNOTATIONS = 2
@@ -18,7 +18,7 @@ MAX_ANNOTATIONS = 2
 
 def _next_line(user_id):
     """Return the next Line that:
-    - the current user explicitly flagged as skip_edited in Step 1, AND
+    - the current user skipped or flagged for editing in Step 1, AND
     - has not been globally saturated, AND
     - the user has not already resolved in Step 2.
     """
@@ -33,7 +33,7 @@ def _next_line(user_id):
     user_flagged = (
         db.session.query(Annotation.line_id)
         .filter(Annotation.user_id == user_id)
-        .filter(Annotation.status == "skip_edited")
+        .filter(Annotation.status.in_(("skip_edited", "skipped")))
         .subquery()
     )
     user_done = (

@@ -53,8 +53,8 @@ def index():
 @login_required
 def submit(line_id):
     line = Line.query.get_or_404(line_id)
-    action = request.form.get("action")  # validated | skipped | skip_edited | abstained
-    if action not in ("validated", "skipped", "skip_edited", "abstained"):
+    action = request.form.get("action")  # validated | skipped | skip_edited | abstained | rejected
+    if action not in ("validated", "skipped", "skip_edited", "abstained", "rejected"):
         flash("Invalid action.")
         return redirect(url_for("validate.index"))
 

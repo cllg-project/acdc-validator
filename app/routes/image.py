@@ -11,7 +11,7 @@ bp = Blueprint("image", __name__)
 # Horizontal padding: small (just a breath of margin)
 H_PADDING = 20
 # Vertical context: show this many line-heights above and below the polygon
-V_CONTEXT_FACTOR = 2.5
+V_CONTEXT_FACTOR = 0.5
 GREY_FILL = (200, 200, 200)
 GREY_ALPHA = 180  # 0=transparent, 255=opaque — semi-transparent so text is still legible
 

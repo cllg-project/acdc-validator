@@ -190,7 +190,7 @@ main { padding: 2rem 1.5rem; max-width: 860px; margin: 0 auto; }
 .line-image-wrap {
   background: #2a2a2a;
   border-radius: var(--radius);
-  padding: .5rem;
+  padding: .15rem .5rem;
   margin-bottom: 1.2rem;
   display: flex;
   justify-content: center;
@@ -291,6 +291,85 @@ main { padding: 2rem 1.5rem; max-width: 860px; margin: 0 auto; }
 .beta-table td:nth-child(odd)  { color: var(--muted); width: 3rem; }
 .beta-table td:nth-child(even) { font-family: "Noto Serif", serif; font-size: 1rem; }
 .beta-table tr:last-child td { border-bottom: none; }
+
+/* ── Char-insert panel ─────────────────────────────────────── */
+.char-panel {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  margin-bottom: .6rem;
+}
+
+.char-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.char-row-label {
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--muted);
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+  padding: .25rem .5rem;
+  white-space: nowrap;
+  min-width: 4.5rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.char-row-keys {
+  display: flex;
+  flex-wrap: wrap;
+  padding: .2rem .3rem;
+  gap: .2rem;
+  align-items: center;
+}
+
+.char-btn {
+  font-family: "Noto Serif", "Times New Roman", serif;
+  font-size: .88rem;
+  padding: .15rem .4rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: none;
+  cursor: pointer;
+  line-height: 1.5;
+  min-height: 2rem;          /* touch target */
+  transition: background .1s, color .1s, border-color .1s;
+}
+.char-btn:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+.btn-strip {
+  font-size: .72rem;
+  padding: .15rem .5rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  min-height: 2rem;          /* touch target */
+  transition: border-color .1s, color .1s;
+}
+.btn-strip:hover { border-color: #c00; color: #c00; }
+
+@media (max-width: 480px) {
+  .char-row { flex-direction: column; align-items: stretch; }
+  .char-row-label {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    min-width: unset;
+    text-align: left;
+  }
+  .char-row-keys { padding: .3rem; gap: .25rem; }
+  .char-btn, .btn-strip { min-height: 2.4rem; font-size: .9rem; }
+}
 
 /* ── OCR text (editable in review) ────────────────────────── */
 .ocr-edit {

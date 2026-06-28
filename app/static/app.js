@@ -38,6 +38,8 @@
     t:'τ',u:'υ',f:'φ',x:'χ',y:'ψ',w:'ω',v:'ϝ'
   };
   var BETA_DIA = {')':'̓','(':'̔','/':'́','\\':'̀','=':'͂','+':'̈','|':'ͅ'};
+  // Canonical order for polytonic Greek combining marks (breathing → diaeresis → accent → iota sub)
+  var DIA_ORDER = {'̓':1,'̔':1,'̈':2,'́':3,'̀':3,'͂':3,'ͅ':4};
   // Greek punctuation inserted directly (not part of word conversion)
   var BETA_PUNCT = {':':'·', ';':';'}; // ano teleia · (U+0387), erotimatiko ; (U+037E)
 
@@ -70,7 +72,7 @@
     var betaToggle = document.getElementById('beta-toggle');
     if (textField && saveBtn) {
       var originalText = textField.value;
-      var betaPending = ''; // pending modifier chars (*,),(/,\,=,+,|) awaiting base letter
+      var betaPending = ''; // pending uppercase flag (*) for next letter
 
       function updateSaveBtn() {
         var changed = textField.value !== originalText;
@@ -87,8 +89,8 @@
           var ch = raw[i];
           if (ch === '*') { pendingUpper = true; pendingMarks = []; continue; }
           if (BETA_DIA[ch] !== undefined) {
-            if (pendingUpper) pendingMarks.push(BETA_DIA[ch]);
-            else if (clusters.length) clusters[clusters.length - 1][1].push(BETA_DIA[ch]);
+            if (pendingUpper || clusters.length === 0) pendingMarks.push(BETA_DIA[ch]);
+            else clusters[clusters.length - 1][1].push(BETA_DIA[ch]);
             continue;
           }
           var low = ch.toLowerCase();
@@ -99,6 +101,58 @@
           pendingUpper = false; pendingMarks = [];
         }
         return clusters.map(function(c) { return c[0] + c[1].join(''); }).join('').normalize('NFC');
+      }
+
+      // Returns true for Unicode combining diacritical marks (U+0300–U+036F)
+      function isCombining(cp) { return cp >= 0x0300 && cp <= 0x036F; }
+
+      // Apply a combining diacritic to the grapheme cluster immediately before the cursor.
+      // Toggles the mark off if already present; always reorders marks into canonical form
+      // (breathing → diaeresis → accent → iota subscript) so NFC produces precomposed chars.
+      function applyDia(dia) {
+        if (textField.selectionStart !== textField.selectionEnd) return;
+        var pos = textField.selectionStart;
+        var before = textField.value.slice(0, pos);
+        if (!before.length) return;
+        var nfd = before.normalize('NFD');
+        var i = nfd.length - 1;
+        while (i >= 0 && isCombining(nfd.charCodeAt(i))) i--;
+        if (i < 0) return;
+        var base   = nfd[i];
+        var marks  = nfd.slice(i + 1).split('');
+        var idx = marks.indexOf(dia);
+        if (idx >= 0) marks.splice(idx, 1);
+        else marks.push(dia);
+        marks.sort(function(a, b) { return (DIA_ORDER[a] || 99) - (DIA_ORDER[b] || 99); });
+        var newBefore = (nfd.slice(0, i) + base + marks.join('')).normalize('NFC');
+        textField.value = newBefore + textField.value.slice(pos);
+        textField.setSelectionRange(newBefore.length, newBefore.length);
+        updateSaveBtn();
+      }
+
+      // Convert the previous grapheme cluster (or the selection) to upper/lowercase.
+      function convertCase(toUpper) {
+        var start = textField.selectionStart;
+        var end   = textField.selectionEnd;
+        if (start !== end) {
+          var sel  = textField.value.slice(start, end);
+          var conv = toUpper ? sel.toUpperCase() : sel.toLowerCase();
+          textField.value = textField.value.slice(0, start) + conv + textField.value.slice(end);
+          textField.setSelectionRange(start, start + conv.length);
+        } else {
+          if (!start) return;
+          var nfd = textField.value.slice(0, start).normalize('NFD');
+          var i = nfd.length - 1;
+          while (i >= 0 && isCombining(nfd.charCodeAt(i))) i--;
+          if (i < 0) return;
+          var conv = toUpper
+            ? (nfd.slice(0, i) + nfd.slice(i).toUpperCase())
+            : (nfd.slice(0, i) + nfd.slice(i).toLowerCase());
+          var newBefore = conv.normalize('NFC');
+          textField.value = newBefore + textField.value.slice(start);
+          textField.setSelectionRange(newBefore.length, newBefore.length);
+        }
+        updateSaveBtn();
       }
 
       // Fix σ → ς when it sits immediately before the cursor (word boundary)
@@ -126,20 +180,28 @@
         }
       });
 
-      // Betacode toggle — character-by-character insertion; native Backspace handles deletion
-      var BETA_MOD_KEYS = new Set([')', '(', '/', '\\', '=', '+', '|', '*']);
+      // Betacode toggle — diacritics apply to the previous letter; * makes next letter uppercase
       if (betaToggle) {
         textField.addEventListener('keydown', function(e) {
           if (!betaToggle.checked) return;
           if (e.key === 'Enter' || e.metaKey || e.ctrlKey || e.altKey) return;
 
           if (e.key === 'Backspace') {
-            betaPending = ''; // discard any dangling modifier
-            return;           // let the browser delete the last inserted char
+            betaPending = '';
+            return;
           }
 
-          if (BETA_MOD_KEYS.has(e.key)) {
-            betaPending += e.key;
+          // Diacritics: apply retroactively to the previous letter
+          if (BETA_DIA[e.key] !== undefined) {
+            e.preventDefault();
+            betaPending = '';
+            applyDia(BETA_DIA[e.key]);
+            return;
+          }
+
+          // * buffers for the next letter (uppercase)
+          if (e.key === '*') {
+            betaPending = '*';
             e.preventDefault();
             return;
           }
@@ -187,6 +249,14 @@
           textField.focus();
         });
 
+        document.addEventListener('keydown', function(e) {
+          if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+            e.preventDefault();
+            betaToggle.checked = !betaToggle.checked;
+            betaToggle.dispatchEvent(new Event('change'));
+          }
+        });
+
       // Help panel toggle
       var helpBtn = document.getElementById('beta-help-btn');
       var helpPanel = document.getElementById('beta-help');
@@ -197,6 +267,53 @@
           helpBtn.textContent = hidden ? '✕ close reference' : '? reference';
         });
       }
+      }
+
+      // Char-insert bar
+      function insertCharAt(ch) {
+        var start = textField.selectionStart;
+        var end   = textField.selectionEnd;
+        textField.value = textField.value.slice(0, start) + ch + textField.value.slice(end);
+        textField.setSelectionRange(start + ch.length, start + ch.length);
+        textField.focus();
+        updateSaveBtn();
+      }
+
+      document.querySelectorAll('.char-btn').forEach(function(btn) {
+        btn.addEventListener('mousedown', function(e) {
+          e.preventDefault(); // keep textarea focus
+          if (btn.hasAttribute('data-ch'))  insertCharAt(btn.getAttribute('data-ch'));
+          else if (btn.hasAttribute('data-dia')) applyDia(btn.getAttribute('data-dia'));
+        });
+      });
+
+
+      // Strip-action buttons
+      function stripMarks(marks) {
+        var s = textField.value.normalize('NFD');
+        marks.forEach(function(cp) { s = s.split(cp).join(''); });
+        textField.value = s.normalize('NFC');
+        updateSaveBtn();
+      }
+
+      var btnStripAccents = document.getElementById('btn-strip-accents');
+      var btnStripSpirits = document.getElementById('btn-strip-spirits');
+      var btnStripNumbers = document.getElementById('btn-strip-numbers');
+      if (btnStripAccents) {
+        btnStripAccents.addEventListener('click', function() {
+          stripMarks(['́', '̀', '͂']);
+        });
+      }
+      if (btnStripSpirits) {
+        btnStripSpirits.addEventListener('click', function() {
+          stripMarks(['̓', '̔']);
+        });
+      }
+      if (btnStripNumbers) {
+        btnStripNumbers.addEventListener('click', function() {
+          textField.value = textField.value.replace(/\s\d+\.?\s/g, ' ');
+          updateSaveBtn();
+        });
       }
     }
   }
@@ -226,6 +343,7 @@
       if (e.key === 'e' || e.key === 'E') submitAction('skip_edited');
       if (e.key === 's' || e.key === 'S') submitAction('skipped');
       if (e.key === 'u' || e.key === 'U') submitAction('abstained');
+      if (e.key === 'x' || e.key === 'X') submitAction('rejected');
     } else if (mode === 'review') {
       if (e.key === 'v' || e.key === 'V') submitAction('validated');
       if (e.key === 's' || e.key === 'S') submitAction('skipped');

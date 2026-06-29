@@ -23,6 +23,9 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
 
+      - name: Install Playwright browser deps
+        run: playwright install chrome --with-deps
+
       - name: Run tests
         run: python -m pytest -v
         env:

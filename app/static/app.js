@@ -16,6 +16,15 @@
     if (mode === 'review') {
       var tf = document.getElementById('text-field');
       if (tf) tf.focus();
+      // Start visible timer
+      var timerEl = document.getElementById('timer');
+      if (timerEl) {
+        setInterval(function() {
+          if (startTime === null) return;
+          var s = Math.floor((Date.now() - startTime) / 1000);
+          timerEl.textContent = '⏱ ' + Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2);
+        }, 1000);
+      }
     }
   }
 
@@ -245,7 +254,9 @@
         betaToggle.addEventListener('change', function() {
           betaPending = '';
           var label = document.getElementById('beta-label');
-          if (label) label.textContent = betaToggle.checked ? 'Betacode ON' : 'Betacode OFF';
+          if (label) label.textContent = betaToggle.checked ? 'ON' : 'off';
+          var pill = document.getElementById('beta-pill-track');
+          if (pill) pill.classList.toggle('beta-on', betaToggle.checked);
           textField.focus();
         });
 

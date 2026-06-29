@@ -2,7 +2,82 @@ import os
 import pytest
 from xml.etree import ElementTree as ET
 
+
+# ── pytest-playwright: use system Chrome on hosts where playwright chromium
+#    isn't available (e.g. Ubuntu 26 which is not yet in playwright's matrix)
+@pytest.fixture(scope="session")
+def browser_type_launch_args(browser_type_launch_args):
+    return {**browser_type_launch_args, "channel": "chrome"}
+
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
+
+
+# ── Playwright UI fixtures ──────────────────────────────────────────────────
+
+@pytest.fixture(scope="module")
+def live_server_ui(tmp_path_factory):
+    """Flask server with a temp SQLite DB seeded with a reviewable line."""
+    import threading
+    from werkzeug.serving import make_server
+    from app import create_app, db as _db
+    from app.models import User, Line, Annotation
+
+    db_path = tmp_path_factory.mktemp("ui") / "test_ui.db"
+
+    test_app = create_app({
+        "TESTING": True,
+        "SQLALCHEMY_DATABASE_URI": f"sqlite:///{db_path}",
+        "DATA_PATH": FIXTURES_DIR,
+        "SECRET_KEY": "test-ui-secret",
+        "WTF_CSRF_ENABLED": False,
+    })
+
+    with test_app.app_context():
+        _db.create_all()
+
+        user = User(username="uitester")
+        user.set_password("uitest123")
+        _db.session.add(user)
+        _db.session.flush()
+
+        line = Line(
+            book_id="ui_book_001",
+            page_png="sample_alto.xml",
+            page_jpg="sample_alto.xml",
+            alto_xml="sample_alto.xml",
+            line_index=5,
+            hpos=100, vpos=200, width=500, height=50,
+            polygon_points="100,200 600,200 600,250 100,250",
+            ocr_text="σύνεσις δὲ ἀγαθή",
+        )
+        _db.session.add(line)
+        _db.session.flush()
+
+        ann = Annotation(user_id=user.id, line_id=line.id, status="skip_edited")
+        _db.session.add(ann)
+        _db.session.commit()
+
+    server = make_server("127.0.0.1", 0, test_app)
+    port = server.socket.getsockname()[1]
+    t = threading.Thread(target=server.serve_forever, daemon=True)
+    t.start()
+
+    yield f"http://127.0.0.1:{port}"
+
+    server.shutdown()
+
+
+@pytest.fixture(scope="module")
+def auth_page(live_server_ui, browser):
+    """Playwright page authenticated as uitester, yields (page, base_url)."""
+    page = browser.new_page()
+    page.goto(f"{live_server_ui}/login")
+    page.fill("input[name=username]", "uitester")
+    page.fill("input[name=password]", "uitest123")
+    page.click("button[type=submit]")
+    page.wait_for_load_state("networkidle")
+    yield page, live_server_ui
+    page.close()
 ALTO_NS = "http://www.loc.gov/standards/alto/ns-v4#"
 
 

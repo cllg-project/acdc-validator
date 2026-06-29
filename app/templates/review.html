@@ -14,27 +14,70 @@
 </div>
 
 <div class="annotation-wrap" id="annotation-area" style="display:none">
-  <div class="meta">
-    <span class="book-id">{{ line.book_id }}</span>
-    <span class="line-index">line {{ line.line_index + 1 }}</span>
-  </div>
 
-  <div class="line-image-wrap">
-    <img src="{{ url_for('image.line_image', line_id=line.id) }}"
-         alt="Line image" class="line-image">
+  <!-- Meta row -->
+  <div class="review-meta">
+    <span class="review-book-id">{{ line.book_id }}</span>
+    <span class="meta-dot"></span>
+    <span class="review-line-num">line {{ line.line_index + 1 }} of {{ total_lines }}</span>
+    <span id="timer" class="review-timer">⏱ 0:00</span>
   </div>
 
   <form method="post" action="{{ url_for('review.submit', line_id=line.id) }}" id="annotation-form">
     <input type="hidden" name="elapsed_seconds" id="elapsed-field">
     <input type="hidden" name="original_text" value="{{ line.ocr_text }}">
     <input type="hidden" name="from_validate" value="{{ from_validate }}">
-    <div class="beta-bar">
-      <label class="beta-switch">
-        <input type="checkbox" id="beta-toggle">
-        <span id="beta-label">Betacode OFF</span>
-        <kbd title="toggle betacode">Ctrl+B</kbd>
-      </label>
-      <span class="beta-hint">e.g. <code>lo/gos</code> → <code>λόγος</code> &nbsp;·&nbsp; <code>*a)/nqrwpos</code> → <code>Ἄνθρωπος</code> &nbsp;·&nbsp; diacritics come <em>after</em> the vowel</span>
+
+    <!-- Core column: image → toggle → textarea → buttons -->
+    <div class="review-core">
+
+      <!-- 1. Line image -->
+      <div class="line-image-wrap">
+        <img src="{{ url_for('image.line_image', line_id=line.id) }}"
+             alt="Line image" class="line-image">
+      </div>
+
+      <!-- 2. Betacode toggle -->
+      <div class="beta-pill-wrap">
+        <label class="beta-pill-label-wrap" for="beta-toggle">
+          <input type="checkbox" id="beta-toggle" hidden>
+          <div id="beta-pill-track" class="beta-pill"><div class="beta-knob"></div></div>
+          <span class="beta-pill-text">β <span id="beta-label">off</span></span>
+        </label>
+        <span class="beta-hint">e.g. <code>lo/gos</code> → <code>λόγος</code> &nbsp;·&nbsp; <code>*a)/nqrwpos</code> → <code>Ἄνθρωπος</code></span>
+      </div>
+
+      <!-- 3. Textarea -->
+      <textarea name="text" id="text-field" class="ocr-edit" rows="2"
+                spellcheck="false">{{ prefill }}</textarea>
+
+      <!-- 4. Action buttons -->
+      <div class="action-bar">
+        <button type="submit" name="action" value="edited" id="btn-save-edit"
+                class="btn btn-primary" title="Keyboard: Enter">
+          ✎ Save edit <kbd>↵</kbd>
+        </button>
+        <button type="submit" name="action" value="validated"
+                class="btn btn-success" title="Keyboard: V">
+          ✓ Validate as-is <kbd>V</kbd>
+        </button>
+        <button type="submit" name="action" value="skipped"
+                class="btn btn-skip-edit" title="Keyboard: S">
+          ⏭ Skip <kbd>S</kbd>
+        </button>
+        <button type="submit" name="action" value="rejected"
+                class="btn btn-danger" title="Keyboard: X">
+          ✕ Reject <kbd>X</kbd>
+        </button>
+      </div>
+
+    </div><!-- end review-core -->
+  </form>
+
+  <!-- Character tools (below divider) -->
+  <div class="char-tools">
+    <div class="char-tools-header">
+      <span class="char-tools-label">Character tools</span>
       <button type="button" id="beta-help-btn" class="btn-link">? reference</button>
     </div>
 
@@ -85,22 +128,45 @@
         </div>
       </div>
     </div>
-    <div class="char-panel">
-      <div class="char-row">
-        <span class="char-row-label">sup #</span>
+
+    <div class="char-tools-rows">
+
+      <!-- Strip (1st, with bottom border separator) -->
+      <div class="char-row char-section-strip">
+        <span class="char-row-label">strip</span>
         <div class="char-row-keys">
-          <button type="button" class="char-btn" data-ch="⁰">⁰</button>
-          <button type="button" class="char-btn" data-ch="¹">¹</button>
-          <button type="button" class="char-btn" data-ch="²">²</button>
-          <button type="button" class="char-btn" data-ch="³">³</button>
-          <button type="button" class="char-btn" data-ch="⁴">⁴</button>
-          <button type="button" class="char-btn" data-ch="⁵">⁵</button>
-          <button type="button" class="char-btn" data-ch="⁶">⁶</button>
-          <button type="button" class="char-btn" data-ch="⁷">⁷</button>
-          <button type="button" class="char-btn" data-ch="⁸">⁸</button>
-          <button type="button" class="char-btn" data-ch="⁹">⁹</button>
+          <button type="button" class="btn-strip" id="btn-strip-accents">−accents</button>
+          <button type="button" class="btn-strip" id="btn-strip-spirits">−spirits</button>
+          <button type="button" class="btn-strip" id="btn-strip-numbers">−numbers</button>
         </div>
       </div>
+
+      <!-- Diacritics (2nd) -->
+      <div class="char-row">
+        <span class="char-row-label">diacr.</span>
+        <div class="char-row-keys">
+          <button type="button" class="char-btn" data-dia="̓" title=") smooth">ἀ</button>
+          <button type="button" class="char-btn" data-dia="̔" title="( rough">ἁ</button>
+          <button type="button" class="char-btn" data-dia="́" title="/ acute">ά</button>
+          <button type="button" class="char-btn" data-dia="̀" title="\ grave">ὰ</button>
+          <button type="button" class="char-btn" data-dia="͂" title="= circumflex">ᾶ</button>
+          <button type="button" class="char-btn" data-dia="̈" title="+ diaeresis">ϊ</button>
+          <button type="button" class="char-btn" data-dia="ͅ" title="| iota sub">ᾳ</button>
+        </div>
+      </div>
+
+      <!-- Punctuation (3rd) -->
+      <div class="char-row">
+        <span class="char-row-label">punct.</span>
+        <div class="char-row-keys">
+          <button type="button" class="char-btn" data-ch="·" title="ano teleia">·</button>
+          <button type="button" class="char-btn" data-ch=";" title="erotimatiko">;</button>
+          <button type="button" class="char-btn" data-ch=",">,</button>
+          <button type="button" class="char-btn" data-ch=".">.</button>
+        </div>
+      </div>
+
+      <!-- Superscript letters (4th, always visible) -->
       <div class="char-row">
         <span class="char-row-label">sup abc</span>
         <div class="char-row-keys">
@@ -122,117 +188,102 @@
           <button type="button" class="char-btn" data-ch="ᵖ">ᵖ</button>
         </div>
       </div>
-      <div class="char-row">
-        <span class="char-row-label">punct</span>
-        <div class="char-row-keys">
-          <button type="button" class="char-btn" data-ch="·" title="ano teleia">·</button>
-          <button type="button" class="char-btn" data-ch=";" title="erotimatiko">;</button>
-          <button type="button" class="char-btn" data-ch=",">,</button>
-          <button type="button" class="char-btn" data-ch=".">.</button>
+
+      <!-- αβγ lowercase (collapsible) -->
+      <details class="char-collapsible">
+        <summary><span>α β γ — lowercase</span></summary>
+        <div class="char-row">
+          <span class="char-row-label">αβγ</span>
+          <div class="char-row-keys">
+            <button type="button" class="char-btn" data-ch="α">α</button>
+            <button type="button" class="char-btn" data-ch="β">β</button>
+            <button type="button" class="char-btn" data-ch="γ">γ</button>
+            <button type="button" class="char-btn" data-ch="δ">δ</button>
+            <button type="button" class="char-btn" data-ch="ε">ε</button>
+            <button type="button" class="char-btn" data-ch="ζ">ζ</button>
+            <button type="button" class="char-btn" data-ch="η">η</button>
+            <button type="button" class="char-btn" data-ch="θ">θ</button>
+            <button type="button" class="char-btn" data-ch="ι">ι</button>
+            <button type="button" class="char-btn" data-ch="κ">κ</button>
+            <button type="button" class="char-btn" data-ch="λ">λ</button>
+            <button type="button" class="char-btn" data-ch="μ">μ</button>
+            <button type="button" class="char-btn" data-ch="ν">ν</button>
+            <button type="button" class="char-btn" data-ch="ξ">ξ</button>
+            <button type="button" class="char-btn" data-ch="ο">ο</button>
+            <button type="button" class="char-btn" data-ch="π">π</button>
+            <button type="button" class="char-btn" data-ch="ρ">ρ</button>
+            <button type="button" class="char-btn" data-ch="σ">σ</button>
+            <button type="button" class="char-btn" data-ch="ς">ς</button>
+            <button type="button" class="char-btn" data-ch="τ">τ</button>
+            <button type="button" class="char-btn" data-ch="υ">υ</button>
+            <button type="button" class="char-btn" data-ch="φ">φ</button>
+            <button type="button" class="char-btn" data-ch="χ">χ</button>
+            <button type="button" class="char-btn" data-ch="ψ">ψ</button>
+            <button type="button" class="char-btn" data-ch="ω">ω</button>
+            <button type="button" class="char-btn" data-ch="ϝ">ϝ</button>
+          </div>
         </div>
-      </div>
-      <div class="char-row">
-        <span class="char-row-label">diacritics</span>
-        <div class="char-row-keys">
-          <button type="button" class="char-btn" data-dia="̓" title=") smooth breathing (psili)">ἀ</button>
-          <button type="button" class="char-btn" data-dia="̔" title="( rough breathing (dasia)">ἁ</button>
-          <button type="button" class="char-btn" data-dia="́" title="/ acute (oxia)">ά</button>
-          <button type="button" class="char-btn" data-dia="̀" title="\ grave (varia)">ὰ</button>
-          <button type="button" class="char-btn" data-dia="͂" title="= circumflex (perispomeni)">ᾶ</button>
-          <button type="button" class="char-btn" data-dia="̈" title="+ diaeresis (dialytika)">ϊ</button>
-          <button type="button" class="char-btn" data-dia="ͅ" title="| iota subscript (ypogegrammeni)">ᾳ</button>
+      </details>
+
+      <!-- ΑΒΓ uppercase (collapsible) -->
+      <details class="char-collapsible">
+        <summary><span>Α Β Γ — uppercase</span></summary>
+        <div class="char-row">
+          <span class="char-row-label">ΑΒΓ</span>
+          <div class="char-row-keys">
+            <button type="button" class="char-btn" data-ch="Α">Α</button>
+            <button type="button" class="char-btn" data-ch="Β">Β</button>
+            <button type="button" class="char-btn" data-ch="Γ">Γ</button>
+            <button type="button" class="char-btn" data-ch="Δ">Δ</button>
+            <button type="button" class="char-btn" data-ch="Ε">Ε</button>
+            <button type="button" class="char-btn" data-ch="Ζ">Ζ</button>
+            <button type="button" class="char-btn" data-ch="Η">Η</button>
+            <button type="button" class="char-btn" data-ch="Θ">Θ</button>
+            <button type="button" class="char-btn" data-ch="Ι">Ι</button>
+            <button type="button" class="char-btn" data-ch="Κ">Κ</button>
+            <button type="button" class="char-btn" data-ch="Λ">Λ</button>
+            <button type="button" class="char-btn" data-ch="Μ">Μ</button>
+            <button type="button" class="char-btn" data-ch="Ν">Ν</button>
+            <button type="button" class="char-btn" data-ch="Ξ">Ξ</button>
+            <button type="button" class="char-btn" data-ch="Ο">Ο</button>
+            <button type="button" class="char-btn" data-ch="Π">Π</button>
+            <button type="button" class="char-btn" data-ch="Ρ">Ρ</button>
+            <button type="button" class="char-btn" data-ch="Σ">Σ</button>
+            <button type="button" class="char-btn" data-ch="Τ">Τ</button>
+            <button type="button" class="char-btn" data-ch="Υ">Υ</button>
+            <button type="button" class="char-btn" data-ch="Φ">Φ</button>
+            <button type="button" class="char-btn" data-ch="Χ">Χ</button>
+            <button type="button" class="char-btn" data-ch="Ψ">Ψ</button>
+            <button type="button" class="char-btn" data-ch="Ω">Ω</button>
+            <button type="button" class="char-btn" data-ch="Ϝ">Ϝ</button>
+          </div>
         </div>
-      </div>
-      <div class="char-row">
-        <span class="char-row-label">αβγ</span>
-        <div class="char-row-keys">
-          <button type="button" class="char-btn" data-ch="α">α</button>
-          <button type="button" class="char-btn" data-ch="β">β</button>
-          <button type="button" class="char-btn" data-ch="γ">γ</button>
-          <button type="button" class="char-btn" data-ch="δ">δ</button>
-          <button type="button" class="char-btn" data-ch="ε">ε</button>
-          <button type="button" class="char-btn" data-ch="ζ">ζ</button>
-          <button type="button" class="char-btn" data-ch="η">η</button>
-          <button type="button" class="char-btn" data-ch="θ">θ</button>
-          <button type="button" class="char-btn" data-ch="ι">ι</button>
-          <button type="button" class="char-btn" data-ch="κ">κ</button>
-          <button type="button" class="char-btn" data-ch="λ">λ</button>
-          <button type="button" class="char-btn" data-ch="μ">μ</button>
-          <button type="button" class="char-btn" data-ch="ν">ν</button>
-          <button type="button" class="char-btn" data-ch="ξ">ξ</button>
-          <button type="button" class="char-btn" data-ch="ο">ο</button>
-          <button type="button" class="char-btn" data-ch="π">π</button>
-          <button type="button" class="char-btn" data-ch="ρ">ρ</button>
-          <button type="button" class="char-btn" data-ch="σ">σ</button>
-          <button type="button" class="char-btn" data-ch="ς">ς</button>
-          <button type="button" class="char-btn" data-ch="τ">τ</button>
-          <button type="button" class="char-btn" data-ch="υ">υ</button>
-          <button type="button" class="char-btn" data-ch="φ">φ</button>
-          <button type="button" class="char-btn" data-ch="χ">χ</button>
-          <button type="button" class="char-btn" data-ch="ψ">ψ</button>
-          <button type="button" class="char-btn" data-ch="ω">ω</button>
-          <button type="button" class="char-btn" data-ch="ϝ">ϝ</button>
+      </details>
+
+      <!-- Superscript numbers (collapsible) -->
+      <details class="char-collapsible">
+        <summary><span>⁰ ¹ ² — superscript numbers</span></summary>
+        <div class="char-row">
+          <span class="char-row-label">sup #</span>
+          <div class="char-row-keys">
+            <button type="button" class="char-btn" data-ch="⁰">⁰</button>
+            <button type="button" class="char-btn" data-ch="¹">¹</button>
+            <button type="button" class="char-btn" data-ch="²">²</button>
+            <button type="button" class="char-btn" data-ch="³">³</button>
+            <button type="button" class="char-btn" data-ch="⁴">⁴</button>
+            <button type="button" class="char-btn" data-ch="⁵">⁵</button>
+            <button type="button" class="char-btn" data-ch="⁶">⁶</button>
+            <button type="button" class="char-btn" data-ch="⁷">⁷</button>
+            <button type="button" class="char-btn" data-ch="⁸">⁸</button>
+            <button type="button" class="char-btn" data-ch="⁹">⁹</button>
+          </div>
         </div>
-      </div>
-      <div class="char-row">
-        <span class="char-row-label">ΑΒΓ</span>
-        <div class="char-row-keys">
-          <button type="button" class="char-btn" data-ch="Α">Α</button>
-          <button type="button" class="char-btn" data-ch="Β">Β</button>
-          <button type="button" class="char-btn" data-ch="Γ">Γ</button>
-          <button type="button" class="char-btn" data-ch="Δ">Δ</button>
-          <button type="button" class="char-btn" data-ch="Ε">Ε</button>
-          <button type="button" class="char-btn" data-ch="Ζ">Ζ</button>
-          <button type="button" class="char-btn" data-ch="Η">Η</button>
-          <button type="button" class="char-btn" data-ch="Θ">Θ</button>
-          <button type="button" class="char-btn" data-ch="Ι">Ι</button>
-          <button type="button" class="char-btn" data-ch="Κ">Κ</button>
-          <button type="button" class="char-btn" data-ch="Λ">Λ</button>
-          <button type="button" class="char-btn" data-ch="Μ">Μ</button>
-          <button type="button" class="char-btn" data-ch="Ν">Ν</button>
-          <button type="button" class="char-btn" data-ch="Ξ">Ξ</button>
-          <button type="button" class="char-btn" data-ch="Ο">Ο</button>
-          <button type="button" class="char-btn" data-ch="Π">Π</button>
-          <button type="button" class="char-btn" data-ch="Ρ">Ρ</button>
-          <button type="button" class="char-btn" data-ch="Σ">Σ</button>
-          <button type="button" class="char-btn" data-ch="Τ">Τ</button>
-          <button type="button" class="char-btn" data-ch="Υ">Υ</button>
-          <button type="button" class="char-btn" data-ch="Φ">Φ</button>
-          <button type="button" class="char-btn" data-ch="Χ">Χ</button>
-          <button type="button" class="char-btn" data-ch="Ψ">Ψ</button>
-          <button type="button" class="char-btn" data-ch="Ω">Ω</button>
-          <button type="button" class="char-btn" data-ch="Ϝ">Ϝ</button>
-        </div>
-      </div>
-      <div class="char-row">
-        <span class="char-row-label">strip</span>
-        <div class="char-row-keys">
-          <button type="button" class="btn-strip" id="btn-strip-accents">−accents</button>
-          <button type="button" class="btn-strip" id="btn-strip-spirits">−spirits</button>
-          <button type="button" class="btn-strip" id="btn-strip-numbers">−numbers</button>
-        </div>
-      </div>
-    </div>
-    <textarea name="text" id="text-field" class="ocr-edit" rows="2"
-              spellcheck="false">{{ prefill }}</textarea>
-    <div class="action-bar">
-      <button type="submit" name="action" value="edited" id="btn-save-edit"
-              class="btn btn-primary" title="Keyboard: Enter">✎ Save edit</button>
-      <button type="submit" name="action" value="validated"
-              class="btn btn-success" title="Keyboard: V">✓ Validate as-is</button>
-      <button type="submit" name="action" value="skipped"
-              class="btn btn-skip-edit" title="Keyboard: S">⏭ Skip</button>
-      <button type="submit" name="action" value="rejected"
-              class="btn btn-danger" title="Keyboard: X">✕ Skip forever</button>
-    </div>
-    <p class="action-hint">
-      <strong>Save edit</strong> — text was corrected &nbsp;·&nbsp;
-      <strong>Validate as-is</strong> — OCR is correct &nbsp;·&nbsp;
-      <strong>Skip</strong> — come back later &nbsp;·&nbsp;
-      <strong>Skip forever</strong> — ignore this line (only for you)
-    </p>
-  </form>
-</div>
+      </details>
+
+    </div><!-- end char-tools-rows -->
+  </div><!-- end char-tools -->
+
+</div><!-- end annotation-area -->
 
 <script>
   window.ANNOTATOR_MODE = 'review';

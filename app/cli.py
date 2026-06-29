@@ -10,6 +10,8 @@ from .models import User, Line, Annotation
 
 def register(app):
     app.cli.add_command(init_cmd)
+    app.cli.add_command(deduplicate_cmd)
+    app.cli.add_command(cap_cmd)
     app.cli.add_command(user_cmd)
     app.cli.add_command(export_cmd)
 
@@ -68,6 +70,7 @@ def init_cmd(data_path):
         root = tree.getroot()
         text_lines = root.findall(f".//{{{ALTO_NS}}}TextLine")
 
+        seen_positions: set[tuple[int, int]] = set()
         for idx, tl in enumerate(text_lines):
             string_el = tl.find(f"{{{ALTO_NS}}}String")
             if string_el is None:
@@ -84,6 +87,12 @@ def init_cmd(data_path):
             vpos = int(string_el.get("VPOS", tl.get("VPOS", 0)))
             width = int(string_el.get("WIDTH", tl.get("WIDTH", 0)))
             height = int(string_el.get("HEIGHT", tl.get("HEIGHT", 0)))
+
+            pos_key = (hpos, vpos)
+            if pos_key in seen_positions:
+                skipped += 1
+                continue
+            seen_positions.add(pos_key)
 
             existing = Line.query.filter_by(book_id=book_id, line_index=idx).first()
             if existing:
@@ -110,6 +119,111 @@ def init_cmd(data_path):
         click.echo(f"  {book_id}: {len(text_lines)} lines")
 
     click.echo(f"\nDone. {total_lines} lines inserted, {skipped} already existed.")
+
+
+@click.command("deduplicate")
+def deduplicate_cmd():
+    """Remove duplicate Line rows (same hpos/vpos within a book) and migrate their annotations."""
+    from collections import defaultdict
+    from sqlalchemy import text as sa_text
+
+    TERMINAL = {"validated", "edited"}
+
+    def ann_priority(ann):
+        return (1 if ann.status in TERMINAL else 0, ann.id)
+
+    rows = db.session.execute(sa_text("""
+        SELECT l.id AS dup_id, c.keep_id
+        FROM line l
+        JOIN (
+            SELECT book_id, hpos, vpos, MIN(id) AS keep_id
+            FROM line
+            GROUP BY book_id, hpos, vpos
+            HAVING COUNT(*) > 1
+        ) c ON l.book_id = c.book_id AND l.hpos = c.hpos AND l.vpos = c.vpos
+        WHERE l.id != c.keep_id
+    """)).fetchall()
+
+    if not rows:
+        click.echo("No duplicate lines found.")
+        return
+
+    # Group all duplicate ids by their canonical id so we handle cascading correctly.
+    canonical_to_dups: dict[int, list[int]] = defaultdict(list)
+    for dup_id, keep_id in rows:
+        canonical_to_dups[keep_id].append(dup_id)
+
+    click.echo(f"Found {sum(len(v) for v in canonical_to_dups.values())} duplicate line rows across {len(canonical_to_dups)} canonical lines.")
+    moved = replaced = dropped = deleted = 0
+
+    for keep_id, dup_ids in canonical_to_dups.items():
+        # Gather all annotations from ALL duplicates, grouped by user.
+        dup_anns = Annotation.query.filter(Annotation.line_id.in_(dup_ids)).all()
+        by_user: dict[int, list] = defaultdict(list)
+        for ann in dup_anns:
+            by_user[ann.user_id].append(ann)
+
+        for user_id, user_anns in by_user.items():
+            best_dup = max(user_anns, key=ann_priority)
+            for ann in user_anns:
+                if ann.id != best_dup.id:
+                    db.session.delete(ann)
+                    dropped += 1
+
+            canonical_ann = Annotation.query.filter_by(line_id=keep_id, user_id=user_id).first()
+            if canonical_ann:
+                if ann_priority(best_dup) > ann_priority(canonical_ann):
+                    # Dup annotation is better — promote it onto the canonical row.
+                    canonical_ann.status = best_dup.status
+                    canonical_ann.corrected_text = best_dup.corrected_text
+                    canonical_ann.started_at = best_dup.started_at
+                    canonical_ann.finished_at = best_dup.finished_at
+                    canonical_ann.elapsed_seconds = best_dup.elapsed_seconds
+                    replaced += 1
+                else:
+                    dropped += 1
+                db.session.delete(best_dup)
+            else:
+                best_dup.line_id = keep_id
+                moved += 1
+
+        for dup_id in dup_ids:
+            dup_line = db.session.get(Line, dup_id)
+            if dup_line:
+                db.session.delete(dup_line)
+                deleted += 1
+
+    db.session.commit()
+    click.echo(
+        f"Done. {deleted} duplicate lines removed, "
+        f"{moved} annotations moved, {replaced} annotations upgraded, "
+        f"{dropped} redundant annotations dropped."
+    )
+
+
+@click.command("cap")
+@click.option("--max-lines", default=5, show_default=True, help="Max lines to keep per book.")
+def cap_cmd(max_lines):
+    """Cap each book to --max-lines lines, always preserving annotated lines."""
+    annotated_ids = {
+        row[0] for row in db.session.query(Annotation.line_id).distinct()
+    }
+    book_ids = [r[0] for r in db.session.query(Line.book_id).distinct()]
+
+    deleted = 0
+    for book_id in book_ids:
+        lines = Line.query.filter_by(book_id=book_id).order_by(Line.line_index).all()
+        if len(lines) <= max_lines:
+            continue
+        annotated = [l for l in lines if l.id in annotated_ids]
+        unannotated = [l for l in lines if l.id not in annotated_ids]
+        slots = max(0, max_lines - len(annotated))
+        for line in unannotated[slots:]:
+            db.session.delete(line)
+            deleted += 1
+
+    db.session.commit()
+    click.echo(f"Done. {deleted} lines removed (cap={max_lines}).")
 
 
 @click.group("user")

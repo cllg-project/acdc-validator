@@ -4,6 +4,7 @@ from flask_login import login_required
 from sqlalchemy import func
 from .. import db
 from ..models import User, Line, Annotation
+from ..text_utils import normalize
 
 bp = Blueprint("stats", __name__)
 
@@ -87,6 +88,7 @@ def index():
               for u1 in annotators}
 
     for line_anns in by_line.values():
+        print(line_anns)
         users_here = [u for u in annotators if u in line_anns]
         for i, u1 in enumerate(users_here):
             for u2 in users_here[i+1:]:
@@ -98,7 +100,7 @@ def index():
                     cell["total"] += 1
                     if s1 == "validated" and s2 == "validated":
                         cell["agree_validate"] += 1
-                    elif s1 == "edited" and s2 == "edited" and (t1 or "").strip() == (t2 or "").strip():
+                    elif s1 == "edited" and s2 == "edited" and normalize(t1) == normalize(t2):
                         cell["agree_edited"] += 1
                     else:
                         cell["disagree"] += 1

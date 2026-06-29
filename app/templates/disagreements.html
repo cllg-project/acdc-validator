@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Disagreements{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+
+<div class="val-header">
+  <h1>Disagreements</h1>
+  <span class="val-count">{{ total }} line{{ 's' if total != 1 }}</span>
+</div>
+
+{% if rows %}
+<div class="val-grid">
+  {% for line, anns in rows %}
+  <div class="val-card">
+    <div class="val-img-wrap">
+      <img
+        data-src="{{ url_for('image.line_image', line_id=line.id) }}"
+        alt="Line {{ line.line_index + 1 }} of {{ line.book_id }}"
+        class="val-img lazy"
+        width="600" height="80">
+    </div>
+    <div class="val-meta">
+      <span class="val-book">{{ line.book_id }}</span>
+      <span class="val-line-num">line {{ line.line_index + 1 }}</span>
+    </div>
+    <div class="val-texts">
+      <p class="val-original" title="Original OCR">{{ line.ocr_text }}</p>
+      {% for username, (status, corrected_text) in anns.items() %}
+      <div class="dis-ann">
+        <span class="badge badge-{{ status }}">
+          {% if status == 'validated' %}✓ validated{% else %}✎ edited{% endif %}
+        </span>
+        <span class="val-user">{{ username }}</span>
+        {% if status == 'edited' and corrected_text %}
+        <p class="val-corrected">{{ corrected_text }}</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if pages > 1 %}
+<nav class="pager">
+  {% if has_prev %}
+    <a href="{{ url_for('disagreements.index', page=page-1) }}" class="pager-btn">← Prev</a>
+  {% else %}
+    <span class="pager-btn pager-disabled">← Prev</span>
+  {% endif %}
+  <span class="pager-info">Page {{ page }} / {{ pages }}</span>
+  {% if has_next %}
+    <a href="{{ url_for('disagreements.index', page=page+1) }}" class="pager-btn">Next →</a>
+  {% else %}
+    <span class="pager-btn pager-disabled">Next →</span>
+  {% endif %}
+</nav>
+{% endif %}
+
+{% else %}
+<p class="val-empty">No disagreements found — annotators are in full agreement!</p>
+{% endif %}
+
+<script>
+(function () {
+  var imgs = document.querySelectorAll('img.lazy');
+  if (!imgs.length) return;
+  var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (!entry.isIntersecting) return;
+      var img = entry.target;
+      img.src = img.dataset.src;
+      img.classList.remove('lazy');
+      observer.unobserve(img);
+    });
+  }, { rootMargin: '200px 0px' });
+  imgs.forEach(function (img) { observer.observe(img); });
+}());
+</script>
+{% endblock %}

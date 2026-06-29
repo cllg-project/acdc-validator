@@ -83,13 +83,8 @@
       var originalText = textField.value;
       var betaPending = ''; // pending uppercase flag (*) for next letter
 
-      function updateSaveBtn() {
-        var changed = textField.value !== originalText;
-        saveBtn.classList.toggle('btn-primary', changed);
-        saveBtn.classList.toggle('btn-muted', !changed);
-      }
-      updateSaveBtn();
-      textField.addEventListener('input', function() { updateSaveBtn(); });
+      saveBtn.classList.add('btn-primary');
+      saveBtn.classList.remove('btn-muted');
 
       // betaToGreek without σ→ς so we can insert σ and fix it at word boundaries
       function betaCharToGreek(raw) {
@@ -355,11 +350,6 @@
       if (e.key === 's' || e.key === 'S') submitAction('skipped');
       if (e.key === 'u' || e.key === 'U') submitAction('abstained');
       if (e.key === 'x' || e.key === 'X') submitAction('rejected');
-    } else if (mode === 'review') {
-      if (e.key === 'v' || e.key === 'V') submitAction('validated');
-      if (e.key === 's' || e.key === 'S') submitAction('skipped');
-      if (e.key === 'x' || e.key === 'X') submitAction('rejected');
-      if (e.key === 'Enter' && !e.shiftKey) submitAction('edited');
     }
   });
 

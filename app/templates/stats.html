@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Stats{% endblock %}
+{% block main_class %}wide{% endblock %}
 {% block content %}
 
 <h1 style="margin-bottom:1.5rem">Annotation statistics</h1>
@@ -26,7 +27,7 @@
     </div>
   </div>
 
-  {% set pct = (total_validated / total_lines * 100) | round(1) if total_lines else 0 %}
+  {% set pct = (total_validated / total_lines * 100) | round | int if total_lines else 0 %}
   <div class="progress-bar-wrap">
     <div class="progress-bar" style="width:{{ pct }}%"></div>
   </div>
@@ -37,19 +38,24 @@
 {% if user_stats %}
 <section class="stats-card">
   <h2>Per-user breakdown</h2>
+  <p class="stats-legend">
+    <span class="iaa-agree-v leg-cell">✓</span> validated &nbsp;
+    <span class="iaa-agree-e leg-cell">✎</span> edited &nbsp;
+    <span class="leg-cell">↷</span> skip→edit &nbsp;
+    <span class="leg-cell">⏭</span> skipped &nbsp;
+    <span class="leg-cell">—</span> abstained &nbsp;
+    <span class="iaa-disagree leg-cell">✕</span> rejected
+  </p>
   <table class="stats-table">
     <thead>
       <tr>
         <th>User</th>
-        <th>Validated</th>
-        <th>Avg (s)</th>
-        <th>Edited</th>
-        <th>Avg (s)</th>
-        <th>Skip→Edit</th>
-        <th>Avg (s)</th>
-        <th>Skipped</th>
-        <th>Abstained</th>
-        <th>Rejected</th>
+        <th>✓</th><th>avg s</th>
+        <th>✎</th><th>avg s</th>
+        <th>↷</th><th>avg s</th>
+        <th>⏭</th>
+        <th>—</th>
+        <th>✕</th>
         <th>Total</th>
       </tr>
     </thead>
@@ -65,15 +71,15 @@
       <tr>
         <td><strong>{{ username }}</strong></td>
         <td>{{ v.cnt or 0 }}</td>
-        <td>{{ v.avg_elapsed or '—' }}</td>
+        <td>{{ v.avg_elapsed | round | int if v.avg_elapsed else '—' }}</td>
         <td>{{ e.cnt or 0 }}</td>
-        <td>{{ e.avg_elapsed or '—' }}</td>
+        <td>{{ e.avg_elapsed | round | int if e.avg_elapsed else '—' }}</td>
         <td>{{ se.cnt or 0 }}</td>
-        <td>{{ se.avg_elapsed or '—' }}</td>
+        <td>{{ se.avg_elapsed | round | int if se.avg_elapsed else '—' }}</td>
         <td>{{ sk.cnt or 0 }}</td>
         <td>{{ ab.cnt or 0 }}</td>
         <td>{{ rj.cnt or 0 }}</td>
-        <td>{{ total }}</td>
+        <td><strong>{{ total }}</strong></td>
       </tr>
       {% endfor %}
     </tbody>
@@ -85,11 +91,12 @@
 {% if annotators | length >= 2 %}
 <section class="stats-card">
   <h2>Inter-annotator agreement</h2>
-  <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem">
-    Only lines where <strong>both</strong> annotators left a terminal annotation (validated or edited) are counted.
-    <em>Agree validate</em>: both chose "validate as-is".
-    <em>Agree edited</em>: both edited and produced the <strong>same</strong> corrected text.
-    <em>Disagree</em>: any other combination.
+  <p class="stats-legend">
+    Only lines where <strong>both</strong> annotators left a terminal annotation are counted. Hover cells for raw counts.
+    &nbsp;
+    <span class="iaa-agree-v leg-cell">✓</span> both validated &nbsp;
+    <span class="iaa-agree-e leg-cell">✎</span> both edited, same text &nbsp;
+    <span class="iaa-disagree leg-cell">✕</span> any disagreement
   </p>
   <table class="stats-table iaa-table">
     <thead>
@@ -102,9 +109,9 @@
       <tr>
         <th>vs.</th>
         {% for u2 in annotators %}
-        <th class="iaa-sub">✓ val</th>
-        <th class="iaa-sub">✎ edit</th>
-        <th class="iaa-sub">✕ dis</th>
+        <th class="iaa-sub">✓</th>
+        <th class="iaa-sub">✎</th>
+        <th class="iaa-sub">✕</th>
         {% endfor %}
       </tr>
     </thead>
@@ -121,9 +128,9 @@
             {% if n == 0 %}
               <td colspan="3" class="iaa-self">no overlap</td>
             {% else %}
-              {% set pv = (cell.agree_validate / n * 100) | round(1) %}
-              {% set pe = (cell.agree_edited   / n * 100) | round(1) %}
-              {% set pd = (cell.disagree       / n * 100) | round(1) %}
+              {% set pv = (cell.agree_validate / n * 100) | round | int %}
+              {% set pe = (cell.agree_edited   / n * 100) | round | int %}
+              {% set pd = (cell.disagree       / n * 100) | round | int %}
               <td class="iaa-agree-v" title="{{ cell.agree_validate }}/{{ n }}">{{ pv }}%</td>
               <td class="iaa-agree-e" title="{{ cell.agree_edited }}/{{ n }}">{{ pe }}%</td>
               <td class="iaa-disagree" title="{{ cell.disagree }}/{{ n }}">{{ pd }}%</td>
@@ -134,7 +141,6 @@
       {% endfor %}
     </tbody>
   </table>
-  <p style="color:var(--muted);font-size:.78rem;margin-top:.6rem">Hover cells to see raw counts.</p>
 </section>
 {% endif %}
 

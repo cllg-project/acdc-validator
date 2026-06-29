@@ -88,7 +88,6 @@ def index():
               for u1 in annotators}
 
     for line_anns in by_line.values():
-        print(line_anns)
         users_here = [u for u in annotators if u in line_anns]
         for i, u1 in enumerate(users_here):
             for u2 in users_here[i+1:]:

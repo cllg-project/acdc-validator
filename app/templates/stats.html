@@ -109,7 +109,6 @@
       <tr>
         <th>vs.</th>
         {% for u2 in annotators %}
-        <th class="iaa-sub">🧮</th>
         <th class="iaa-sub">✓</th>
         <th class="iaa-sub">✎</th>
         <th class="iaa-sub">✕</th>
@@ -122,12 +121,12 @@
         <td><strong>{{ u1 }}</strong></td>
         {% for u2 in annotators %}
           {% if u1 == u2 %}
-            <td colspan="4" class="iaa-self">—</td>
+            <td colspan="3" class="iaa-self">—</td>
           {% else %}
             {% set cell = iaa_matrix[u1][u2] %}
             {% set n = cell.total %}
             {% if n == 0 %}
-              <td colspan="4" class="iaa-self">no overlap</td>
+              <td colspan="3" class="iaa-self">no overlap</td>
             {% else %}
               {% set pv = (cell.agree_validate / n * 100) | round | int %}
               {% set pe = (cell.agree_edited   / n * 100) | round | int %}

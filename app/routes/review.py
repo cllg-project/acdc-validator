@@ -67,7 +67,7 @@ def index():
         .order_by(Annotation.id.desc())
         .first()
     )
-    prefill = last.corrected_text if last else line.ocr_text
+    prefill = line.ocr_text
     total_lines = Line.query.filter_by(book_id=line.book_id).count()
     return render_template("review.html", line=line, prefill=prefill, from_validate="0", total_lines=total_lines)
 

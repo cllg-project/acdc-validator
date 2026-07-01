@@ -37,6 +37,7 @@ def create_app(config=None):
     from .routes.stats import bp as stats_bp
     from .routes.validated import bp as validated_bp
     from .routes.disagreements import bp as disagreements_bp
+    from .routes.export import bp as export_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(home_bp)
@@ -46,6 +47,7 @@ def create_app(config=None):
     app.register_blueprint(stats_bp)
     app.register_blueprint(validated_bp)
     app.register_blueprint(disagreements_bp)
+    app.register_blueprint(export_bp)
 
     from . import cli
     cli.register(app)

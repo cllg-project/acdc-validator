@@ -18,6 +18,7 @@
         <a href="{{ url_for('validated.index') }}" class="{% if request.blueprint == 'validated' %}active{% endif %}">Validated</a>
         <a href="{{ url_for('stats.index') }}" class="{% if request.blueprint == 'stats' %}active{% endif %}">Stats</a>
         <a href="{{ url_for('disagreements.index') }}" class="{% if request.blueprint == 'disagreements' %}active{% endif %}">Disagreements</a>
+        <a href="{{ url_for('export.csv_export') }}">Export CSV</a>
         <span class="user-chip">{{ current_user.username }}</span>
         <a href="{{ url_for('auth.logout') }}">Logout</a>
       {% endif %}

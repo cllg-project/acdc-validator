@@ -123,7 +123,7 @@ def init_cmd(data_path):
 
 @click.command("deduplicate")
 def deduplicate_cmd():
-    """Remove duplicate Line rows (same hpos/vpos within a book) and migrate their annotations."""
+    """Remove duplicate Line rows (same hpos/vpos on the same page) and migrate their annotations."""
     from collections import defaultdict
     from sqlalchemy import text as sa_text
 
@@ -136,11 +136,12 @@ def deduplicate_cmd():
         SELECT l.id AS dup_id, c.keep_id
         FROM line l
         JOIN (
-            SELECT book_id, hpos, vpos, MIN(id) AS keep_id
+            SELECT book_id, alto_xml, hpos, vpos, MIN(id) AS keep_id
             FROM line
-            GROUP BY book_id, hpos, vpos
+            GROUP BY book_id, alto_xml, hpos, vpos
             HAVING COUNT(*) > 1
-        ) c ON l.book_id = c.book_id AND l.hpos = c.hpos AND l.vpos = c.vpos
+        ) c ON l.book_id = c.book_id AND l.alto_xml = c.alto_xml
+            AND l.hpos = c.hpos AND l.vpos = c.vpos
         WHERE l.id != c.keep_id
     """)).fetchall()
 

@@ -1,13 +1,16 @@
 from datetime import datetime, timezone
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_required, current_user
-from sqlalchemy import exists
+from sqlalchemy import case, exists, func
 from .. import db
 from ..models import Line, Annotation
 
 bp = Blueprint("validate", __name__)
 
 VALIDATED_STATUSES = ("validated", "edited")
+# Statuses left by another annotator that didn't resolve the line — it still
+# needs a real second annotation, so these jump the queue.
+NEEDS_SECOND_STATUSES = ("skipped", "rejected", "abstained")
 MAX_ANNOTATIONS = 2
 
 
@@ -15,8 +18,14 @@ def _next_line(user_id):
     """Return the next Line that:
     - has fewer than MAX_ANNOTATIONS validated/edited annotations across all users, and
     - has not been touched at all by this user (any annotation).
+
+    Priority order:
+    1. Lines that already have one validated/edited annotation — just need a
+       confirming second pass.
+    2. Lines another annotator skipped / marked garbage (rejected) / marked
+       unqualified (abstained) — they still need a real second annotation.
+    3. Lines nobody has annotated yet.
     """
-    from sqlalchemy import func
     # Lines that have reached the annotation cap (MAX_ANNOTATIONS distinct validated users)
     saturated = (
         db.session.query(Annotation.line_id)
@@ -30,11 +39,26 @@ def _next_line(user_id):
         .filter(Annotation.user_id == user_id)
         .subquery()
     )
+    partially_validated = (
+        db.session.query(Annotation.line_id)
+        .filter(Annotation.status.in_(VALIDATED_STATUSES))
+        .subquery()
+    )
+    needs_second = (
+        db.session.query(Annotation.line_id)
+        .filter(Annotation.status.in_(NEEDS_SECOND_STATUSES))
+        .subquery()
+    )
+    priority = case(
+        (exists().where(partially_validated.c.line_id == Line.id), 0),
+        (exists().where(needs_second.c.line_id == Line.id), 1),
+        else_=2,
+    )
     return (
         Line.query
         .filter(~exists().where(saturated.c.line_id == Line.id))
         .filter(~exists().where(user_seen.c.line_id == Line.id))
-        .order_by(db.func.random())
+        .order_by(priority, db.func.random())
         .first()
     )
 
